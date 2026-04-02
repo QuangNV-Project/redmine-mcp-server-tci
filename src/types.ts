@@ -84,8 +84,6 @@ export interface TransitionValidationResult {
 }
 
 export interface SessionCredentials {
-  username?: string;
-  password?: string;
-  redmineCookie?: string;
+  redmineCookie: string;
   expiresAt?: Date;
 }

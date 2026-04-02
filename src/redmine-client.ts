@@ -57,8 +57,6 @@ export interface IssueListParams {
 }
 
 export interface RedmineAuthCredentials {
-  username?: string;
-  password?: string;
   redmineCookie?: string;
 }
 
@@ -73,41 +71,25 @@ export class RedmineClient {
   private client: AxiosInstance;
   private credentialProvider?: CredentialProvider;
   private sessionId?: string;
-  private authUsername: string;
   private redmineCookie?: string;
 
   constructor(
     baseUrl: string,
-    usernameOrProvider: string | CredentialProvider | RedmineAuthCredentials,
-    password?: string
+    credentialsOrProvider: CredentialProvider | RedmineAuthCredentials
   ) {
     let creds: RedmineAuthCredentials;
 
-    if (typeof usernameOrProvider === "function") {
-      this.credentialProvider = usernameOrProvider;
+    if (typeof credentialsOrProvider === "function") {
+      this.credentialProvider = credentialsOrProvider;
       creds = this.credentialProvider();
-    } else if (typeof usernameOrProvider === "string") {
-      creds = {
-        username: usernameOrProvider,
-        password: password || "",
-      };
     } else {
-      creds = usernameOrProvider;
+      creds = credentialsOrProvider;
     }
 
-    this.authUsername = creds.username || (creds.redmineCookie ? "cookie-auth" : "guest");
     this.redmineCookie = this.normalizeCookie(creds.redmineCookie);
 
     this.client = axios.create({
       baseURL: baseUrl.replace(/\/$/, ""),
-      ...(creds.username
-        ? {
-          auth: {
-            username: creds.username,
-            password: creds.password || "",
-          },
-        }
-        : {}),
       headers: {
         "Content-Type": "application/json",
       },
@@ -122,7 +104,7 @@ export class RedmineClient {
       tracedConfig.__traceMeta = { startedAt: Date.now() };
 
       logger.debug("redmine-http", "Request", {
-        username: this.authUsername,
+        authMode: this.redmineCookie ? "cookie" : "none",
         method: config.method?.toUpperCase(),
         url: `${config.baseURL || ""}${config.url || ""}`,
         params: config.params,
@@ -139,7 +121,7 @@ export class RedmineClient {
           : undefined;
 
         logger.debug("redmine-http", "Response", {
-          username: this.authUsername,
+          authMode: this.redmineCookie ? "cookie" : "none",
           method: response.config.method?.toUpperCase(),
           url: `${response.config.baseURL || ""}${response.config.url || ""}`,
           status: response.status,
@@ -155,7 +137,7 @@ export class RedmineClient {
           : undefined;
 
         logger.error("redmine-http", "Request failed", {
-          username: this.authUsername,
+          authMode: this.redmineCookie ? "cookie" : "none",
           method: error.config?.method?.toUpperCase(),
           url: `${error.config?.baseURL || ""}${error.config?.url || ""}`,
           status: error.response?.status,
@@ -166,8 +148,8 @@ export class RedmineClient {
         });
 
         if (error.response?.status === 401) {
-          logger.warn("redmine-auth", "Authentication failed for Redmine request (check username/password)", {
-            username: this.authUsername,
+          logger.warn("redmine-auth", "Authentication failed for Redmine request (check redmine cookie)", {
+            authMode: this.redmineCookie ? "cookie" : "none",
             url: `${error.config?.baseURL || ""}${error.config?.url || ""}`,
             method: error.config?.method?.toUpperCase(),
           });
@@ -185,54 +167,32 @@ export class RedmineClient {
     this.sessionId = sessionId;
     if (this.credentialProvider) {
       const creds = this.credentialProvider(sessionId);
-      this.authUsername = creds.username || (creds.redmineCookie ? "cookie-auth" : this.authUsername);
       this.redmineCookie = this.normalizeCookie(creds.redmineCookie) || this.redmineCookie;
-
-      if (creds.username) {
-        this.client.defaults.auth = { username: creds.username, password: creds.password || "" };
-      } else {
-        this.client.defaults.auth = undefined;
-      }
 
       logger.debug("redmine-auth", "Updated client auth from credential provider", {
         sessionId,
-        username: this.authUsername,
-        hasCookie: !!this.redmineCookie,
+        authMode: this.redmineCookie ? "cookie" : "none",
       });
     }
   }
 
   async validateConnection(): Promise<void> {
-    if (this.redmineCookie) {
-      await this.client.get("/my/page", {
-        headers: this.buildHtmlHeaders(),
-        responseType: "text",
-      });
-      return;
+    if (!this.redmineCookie) {
+      throw new Error("Missing Redmine cookie. Provide x-redmine-cookie or redmine_cookie.");
     }
 
-    await this.listProjects();
+    await this.client.get("/my/page", {
+      headers: this.buildHtmlHeaders(),
+      responseType: "text",
+    });
   }
 
   async getIssue(issueId: number, includeJournals = true): Promise<RedmineIssue> {
-    if (this.redmineCookie) {
-      return this.getIssueFromHtml(issueId, includeJournals);
+    if (!this.redmineCookie) {
+      throw new Error("Missing Redmine cookie. Provide x-redmine-cookie or redmine_cookie.");
     }
 
-    const include = includeJournals ? "journals,children,attachments" : "";
-    const params = include ? { include } : {};
-
-    try {
-      const res = await this.client.get(`/issues/${issueId}.json`, { params });
-      return res.data.issue;
-    } catch (error: unknown) {
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
-        throw new Error(
-          `Issue #${issueId} not found or inaccessible. If Redmine REST API is disabled, provide a Redmine cookie and use HTML-based access.`
-        );
-      }
-      throw error;
-    }
+    return this.getIssueFromHtml(issueId, includeJournals);
   }
 
   async listIssues(

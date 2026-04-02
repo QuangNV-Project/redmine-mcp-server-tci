@@ -18,26 +18,15 @@ class CredentialSessionManager {
   /**
    * Create a new session with credentials
    */
-  generateSession(input: {
-    username?: string;
-    password?: string;
-    redmineCookie?: string;
-  }): string {
-    const hasCookie = typeof input.redmineCookie === "string" && input.redmineCookie.length > 0;
-    const hasBasic =
-      typeof input.username === "string" &&
-      input.username.length > 0 &&
-      typeof input.password === "string";
-
-    if (!hasCookie && !hasBasic) {
-      throw new Error("Credential session requires redmineCookie or username/password");
+  generateSession(redmineCookie: string): string {
+    const normalizedCookie = redmineCookie.trim();
+    if (!normalizedCookie) {
+      throw new Error("Credential session requires a non-empty redmineCookie");
     }
 
     const sessionId = crypto.randomUUID();
     const credentials: SessionCredentials = {
-      username: input.username,
-      password: input.password,
-      redmineCookie: input.redmineCookie,
+      redmineCookie: normalizedCookie,
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
     };
 
@@ -50,8 +39,7 @@ class CredentialSessionManager {
 
     logger.info("credential-session", "Created credential session", {
       sessionId,
-      username: credentials.username || "cookie-auth",
-      hasCookie,
+      authMode: "cookie",
       expiresAt: credentials.expiresAt,
     });
 

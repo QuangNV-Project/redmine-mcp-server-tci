@@ -50,9 +50,7 @@ npm install
 cp .env.example .env
 
 # 3. Configure your Redmine server in .env
-# Set REDMINE_TCI_URL and one of:
-# - REDMINE_COOKIE (recommended when Redmine REST API is disabled)
-# - REDMINE_USERNAME + REDMINE_PASSWORD (REST API/basic-auth flow)
+# Set REDMINE_TCI_URL and REDMINE_COOKIE
 ```
 
 ### Configuration
@@ -122,11 +120,6 @@ curl -X GET "http://localhost:3000/sse" \
 Alternative query-string form:
 ```bash
 curl -X GET "http://localhost:3000/sse?redmine_cookie=TCI_SESSION%3D...%3B%20_redmine_session%3D..."
-```
-
-Legacy basic-auth form (kept for backward compatibility):
-```bash
-curl -X GET "http://localhost:3000/sse?username=john&password=secret"
 ```
 
 Response:
@@ -254,7 +247,7 @@ examples/
 ### Key Components
 
 **RedmineClient (Enhanced)**
-- Supports both static credentials (fallback) and per-session credentials
+- Supports both static cookie (fallback) and per-session cookie credentials
 - Supports cookie-based session auth for HTML issue scraping
 - Same API as original mcp-server
 - Dynamically updates auth for each request
@@ -367,8 +360,6 @@ docker run -d \
 | Variable | Type | Required | Description |
 |----------|------|----------|-------------|
 | `REDMINE_TCI_URL` | string | Yes | Redmine instance URL |
-| `REDMINE_USERNAME` | string | No* | Fallback username |
-| `REDMINE_PASSWORD` | string | No* | Fallback password |
 | `REDMINE_COOKIE` | string | No* | Fallback cookie for HTML ticket access |
 | `TRANSPORT` | string | No | `stdio` or `sse` (default: `stdio`) |
 | `PORT` | number | No | Server port (default: 3000) |
@@ -381,7 +372,7 @@ docker run -d \
 | `GIT_REPO_PATH` | string | No | Fallback git repository path |
 | `BRANCH_FORMAT` | string | No | `ticket-id` or `ticket-id-title` (default: `ticket-id-title`) |
 
-*Required if using static credentials/cookie instead of per-session auth
+*Required if you do not provide cookie per SSE session
 
 ## Security Considerations
 

@@ -42,8 +42,6 @@ const MONGODB_URI = process.env.MONGODB_URI_MCP_TCI || "";
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || "";
 
 const REDMINE_URL = process.env.REDMINE_TCI_URL || "";
-const REDMINE_USERNAME = process.env.REDMINE_USERNAME || "";
-const REDMINE_PASSWORD = process.env.REDMINE_PASSWORD || "";
 const REDMINE_COOKIE = process.env.REDMINE_COOKIE || "";
 const VALIDATE_SSE_CREDENTIALS = process.env.VALIDATE_SSE_CREDENTIALS === "true";
 const BRANCH_FORMAT =
@@ -85,45 +83,20 @@ logger.info("startup", "Configuration loaded", {
   port: PORT,
   mongoEnabled: !!MONGODB_URI,
   workflowConfigured: !!workflowDef,
-  hasFallbackRedmineCredentials: !!(REDMINE_USERNAME && REDMINE_PASSWORD),
   hasFallbackRedmineCookie: !!REDMINE_COOKIE,
   validateSseCredentialsOnConnect: VALIDATE_SSE_CREDENTIALS,
 });
 
 // Create default RedmineClient (fallback for static credentials)
-const defaultRedmine = REDMINE_COOKIE
-  ? new RedmineClient(REDMINE_URL, { redmineCookie: REDMINE_COOKIE })
-  : new RedmineClient(REDMINE_URL, REDMINE_USERNAME || "guest", REDMINE_PASSWORD || "");
+const defaultRedmine = new RedmineClient(REDMINE_URL, {
+  redmineCookie: REDMINE_COOKIE,
+});
 
 const readSingleHeader = (value: string | string[] | undefined): string | undefined => {
   if (Array.isArray(value)) {
     return value[0];
   }
   return value;
-};
-
-const parseBasicAuth = (
-  authorizationHeader: string | undefined
-): { username: string; password: string } | null => {
-  if (!authorizationHeader || !authorizationHeader.startsWith("Basic ")) {
-    return null;
-  }
-
-  try {
-    const base64 = authorizationHeader.slice("Basic ".length).trim();
-    const decoded = Buffer.from(base64, "base64").toString("utf-8");
-    const separatorIndex = decoded.indexOf(":");
-    if (separatorIndex < 0) {
-      return null;
-    }
-
-    return {
-      username: decoded.slice(0, separatorIndex),
-      password: decoded.slice(separatorIndex + 1),
-    };
-  } catch {
-    return null;
-  }
 };
 
 const summarizeToolArgs = (args: unknown): unknown => {
@@ -318,18 +291,13 @@ const registerServerHandlers = (server: Server, defaultCredentialSessionId: stri
         if (resolvedSessionId && resolvedSessionId.length > 0) {
           const creds = credentialSessionManager.getCredentials(resolvedSessionId);
           if (creds) {
-            const authMode = creds.redmineCookie ? "cookie" : "basic";
-
             logger.debug("auth", "Using credential session for Redmine client", {
               tool: name,
               sessionId: resolvedSessionId,
-              username: creds.username || "cookie-auth",
-              authMode,
+              authMode: "cookie",
             });
 
-            const client = creds.redmineCookie
-              ? new RedmineClient(REDMINE_URL, { redmineCookie: creds.redmineCookie })
-              : new RedmineClient(REDMINE_URL, creds.username || "guest", creds.password || "");
+            const client = new RedmineClient(REDMINE_URL, { redmineCookie: creds.redmineCookie });
             return client;
           }
 
@@ -341,9 +309,8 @@ const registerServerHandlers = (server: Server, defaultCredentialSessionId: stri
 
         logger.debug("auth", "Using fallback Redmine credentials", {
           tool: name,
-          hasFallbackUser: !!REDMINE_USERNAME,
           hasFallbackCookie: !!REDMINE_COOKIE,
-          fallbackUsername: REDMINE_USERNAME || "guest",
+          authMode: REDMINE_COOKIE ? "cookie" : "none",
         });
         return defaultRedmine;
       };
@@ -895,30 +862,14 @@ async function startSSE() {
 
   // Handle initial connection with credentials
   app.get("/sse", async (req, res) => {
-    const queryUsername = req.query.username as string | undefined;
-    const queryPassword = req.query.password as string | undefined;
     const queryRedmineCookie = req.query.redmine_cookie as string | undefined;
-    const headerUsername = readSingleHeader(req.headers["x-redmine-username"] as string | string[] | undefined);
-    const headerPassword = readSingleHeader(req.headers["x-redmine-password"] as string | string[] | undefined);
     const headerRedmineCookie = readSingleHeader(
       req.headers["x-redmine-cookie"] as string | string[] | undefined
     );
     const cookieHeader = readSingleHeader(req.headers.cookie as string | string[] | undefined);
-    const basicAuth = parseBasicAuth(readSingleHeader(req.headers.authorization));
-    const rawAuthorization = readSingleHeader(req.headers.authorization);
-
-    if (rawAuthorization && !basicAuth) {
-      logger.warn("sse", "Authorization header is not Basic and will be ignored for Redmine credential extraction", {
-        authorizationScheme: rawAuthorization.split(" ")[0],
-      });
-    }
-
-    const username = queryUsername || headerUsername || basicAuth?.username;
-    const password = queryPassword || headerPassword || basicAuth?.password;
     const redmineCookie = queryRedmineCookie || headerRedmineCookie || cookieHeader;
 
     const hasCookieCredentials = typeof redmineCookie === "string" && redmineCookie.trim().length > 0;
-    const hasBasicCredentials = typeof username === "string" && username.length > 0 && typeof password === "string";
 
     const credentialSource = queryRedmineCookie
       ? "query-cookie"
@@ -926,62 +877,41 @@ async function startSSE() {
         ? "header-cookie"
         : cookieHeader
           ? "cookie-header"
-          : queryUsername && queryPassword
-            ? "query-basic"
-            : headerUsername && headerPassword
-              ? "header-basic"
-              : basicAuth
-                ? "basic-auth"
-                : "fallback";
+          : "fallback";
 
     let credentialSessionId: string | null = null;
     let credentialsValidated = false;
-    const authMode = hasCookieCredentials ? "cookie" : "basic";
 
     // If credentials provided, create a session for this connection.
     // Optional strict validation can be enabled with VALIDATE_SSE_CREDENTIALS=true.
-    if (hasCookieCredentials || hasBasicCredentials) {
-      const authCredentials = hasCookieCredentials
-        ? {
-          redmineCookie: redmineCookie?.trim(),
-          username,
-          password,
-        }
-        : {
-          username,
-          password,
-        };
+    if (hasCookieCredentials) {
+      const normalizedCookie = redmineCookie?.trim() || "";
+      const authCredentials = {
+        redmineCookie: normalizedCookie,
+      };
 
-      logger.info("sse", "Received per-user Redmine credentials", {
-        username: username || "cookie-auth",
-        authMode,
+      logger.info("sse", "Received per-user Redmine cookie", {
         credentialSource,
         strictValidation: VALIDATE_SSE_CREDENTIALS,
       });
 
-      credentialSessionId = credentialSessionManager.generateSession(authCredentials);
+      credentialSessionId = credentialSessionManager.generateSession(normalizedCookie);
 
       if (VALIDATE_SSE_CREDENTIALS) {
         try {
           const testClient = new RedmineClient(REDMINE_URL, authCredentials);
           await testClient.validateConnection();
           credentialsValidated = true;
-          logger.info("sse", "Validated Redmine credentials for SSE connection", {
-            username: username || "cookie-auth",
-            authMode,
+          logger.info("sse", "Validated Redmine cookie for SSE connection", {
             credentialSource,
           });
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : String(err);
-          logger.info("sse", "Redmine credential validation failed", {
-            username: username || "cookie-auth",
-            authMode,
+          logger.info("sse", "Redmine cookie validation failed", {
             credentialSource,
             error: message,
           });
-          logger.warn("sse", "Failed to validate Redmine credentials for SSE connection", {
-            username: username || "cookie-auth",
-            authMode,
+          logger.warn("sse", "Failed to validate Redmine cookie for SSE connection", {
             credentialSource,
             error: message,
           });
@@ -993,9 +923,7 @@ async function startSSE() {
           return;
         }
       } else {
-        logger.info("sse", "Accepted Redmine credentials without connect-time validation", {
-          username: username || "cookie-auth",
-          authMode,
+        logger.info("sse", "Accepted Redmine cookie without connect-time validation", {
           credentialSource,
         });
 
@@ -1004,22 +932,16 @@ async function startSSE() {
           try {
             const testClient = new RedmineClient(REDMINE_URL, authCredentials);
             await testClient.validateConnection();
-            logger.info("sse", "Background credential check succeeded", {
-              username: username || "cookie-auth",
-              authMode,
+            logger.info("sse", "Background cookie check succeeded", {
               credentialSource,
             });
           } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
-            logger.info("sse", "Background credential check failed", {
-              username: username || "cookie-auth",
-              authMode,
+            logger.info("sse", "Background cookie check failed", {
               credentialSource,
               error: message,
             });
-            logger.warn("sse", "Background credential check failed", {
-              username: username || "cookie-auth",
-              authMode,
+            logger.warn("sse", "Background cookie check failed", {
               credentialSource,
               error: message,
             });
@@ -1027,8 +949,9 @@ async function startSSE() {
         })();
       }
     } else {
-      logger.warn("sse", "SSE connection without per-user credentials; fallback credentials will be used", {
+      logger.warn("sse", "SSE connection without per-user cookie; fallback cookie will be used", {
         credentialSource,
+        hasFallbackCookie: !!REDMINE_COOKIE,
       });
     }
 

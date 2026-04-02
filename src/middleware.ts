@@ -107,8 +107,6 @@ export function createCorsMiddleware(allowedOrigins: string) {
     allowedHeaders: [
       "Content-Type",
       "Authorization",
-      "x-redmine-username",
-      "x-redmine-password",
       "x-redmine-cookie",
       "x-request-id",
     ],

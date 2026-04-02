@@ -89,7 +89,8 @@ export function parseRequirementExcelFromPath(filePath: string): TicketRequireme
         throw new Error(`Excel file not found: ${filePath}`);
     }
 
-    const workbook = XLSX.readFile(filePath);
+    const workbookBuffer = fs.readFileSync(filePath);
+    const workbook = XLSX.read(workbookBuffer, { type: "buffer" });
     return parseWorkbook(workbook, path.resolve(filePath));
 }
 

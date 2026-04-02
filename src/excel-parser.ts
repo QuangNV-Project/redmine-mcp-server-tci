@@ -30,7 +30,8 @@ export async function loadWorkflowFromExcel(filePath: string): Promise<WorkflowD
     throw new Error(`Workflow file not found: ${filePath}`);
   }
 
-  const workbook = XLSX.readFile(filePath);
+  const workbookBuffer = fs.readFileSync(filePath);
+  const workbook = XLSX.read(workbookBuffer, { type: "buffer" });
   const rulesSheet = workbook.Sheets["Rules"];
   const validatorsSheet = workbook.Sheets["Validators"];
   const actionsSheet = workbook.Sheets["Actions"];
@@ -181,7 +182,8 @@ export function validateWorkflowExcelStructure(filePath: string): {
   }
 
   try {
-    const workbook = XLSX.readFile(filePath);
+    const workbookBuffer = fs.readFileSync(filePath);
+    const workbook = XLSX.read(workbookBuffer, { type: "buffer" });
 
     if (!workbook.Sheets["Rules"]) {
       errors.push('Missing required sheet: "Rules"');
