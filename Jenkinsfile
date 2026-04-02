@@ -138,7 +138,7 @@ pipeline {
 
                                 echo "Running ${CONTAINER_NAME} -> Port: \$PORT"
 
-                                docker run -d --name ${CONTAINER_NAME} --env-file ./infra/\$ENV_FILE --network prod-network -p \$PORT:3000 -v /logs/redmine-mcp-server:/app/logs --restart unless-stopped ${DOCKERHUB_IMAGE}:${IMAGE_TAG}
+                                docker run -d --name ${CONTAINER_NAME} --env-file ./infra/\$ENV_FILE --network mcp-network -p \$PORT:3000 -v /logs/redmine-mcp-server:/app/logs --restart unless-stopped ${DOCKERHUB_IMAGE}:${IMAGE_TAG}
                             '
                         """
                     }
