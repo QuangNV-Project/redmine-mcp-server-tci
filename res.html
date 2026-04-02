@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Feature #41349: [MH Danh sách đơn hàng/ Quản lý món order] Thêm lọc Ngày thực hiện đơn - 2.1 Phần mềm nhà
+        hàng - Redmine</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="description" content="Redmine" />
+    <meta name="keywords" content="issue,bug,tracker" />
+    <meta name="csrf-param" content="authenticity_token" />
+    <meta name="csrf-token"
+        content="FGm9HiWeu1Z0kVjuRAC+lPAm04ZCtc3CbERt6Jz/kgSjfp2//QBnz6fhVIg2cSCmWuFtReWLNGGXBL4ay3ZKtw==" />
+    <link rel='shortcut icon' href='/themes/PurpleMine2-2.14.0/favicon/favicon.ico?1611770453' />
+    <link rel="stylesheet" media="all" href="/stylesheets/jquery/jquery-ui-1.11.0.css?1576844386" />
+    <link rel="stylesheet" media="all" href="/stylesheets/tribute-3.7.3.css?1576844386" />
+    <link rel="stylesheet" media="all" href="/themes/PurpleMine2-2.14.0/stylesheets/application.css?1611770453" />
+    <link rel="stylesheet" media="all" href="/stylesheets/responsive.css?1576844386" />
+
+    <script src="/javascripts/jquery-2.2.4-ui-1.11.0-ujs-5.2.3.js?1576844386"></script>
+    <script src="/javascripts/tribute-3.7.3.min.js?1576844386"></script>
+    <script src="/javascripts/application.js?1576844386"></script>
+    <script src="/javascripts/responsive.js?1576844386"></script>
+    <script>
+        //<![CDATA[
+$(window).on('load', function(){ warnLeavingUnsaved('Trang hiện tại chứa nội dung chưa lưu và sẽ bị mất nếu bạn rời trang này.'); });
+//]]>
+    </script>
+    <script src="/themes/PurpleMine2-2.14.0/javascripts/theme.js?1611770453"></script>
+    <link rel="stylesheet" media="screen"
+        href="/plugin_assets/redmine_agile/stylesheets/redmine_agile.css?1617068919" />
+    <link rel="stylesheet" media="screen"
+        href="/plugin_assets/redmine_lightbox2/stylesheets/jquery.fancybox-3.5.7.min.css?1617606562" />
+    <link rel="stylesheet" media="screen" href="/plugin_assets/redmine_lightbox2/stylesheets/lightbox.css?1617606562" />
+    <script src="/plugin_assets/redmine_lightbox2/javascripts/jquery.fancybox-3.5.7.min.js?1617606562"></script>
+    <script src="/plugin_assets/redmine_lightbox2/javascripts/lightbox.js?1617606562"></script>
+    <!-- page specific tags -->
+    <script src="/javascripts/jstoolbar/jstoolbar.js?1576844386"></script>
+    <script src="/javascripts/jstoolbar/textile.js?1576844386"></script>
+    <script src="/javascripts/jstoolbar/lang/jstoolbar-vi.js?1576844386"></script>
+    <script>
+        //<![CDATA[
+var wikiImageMimeTypes = ["image/gif","image/jpeg","image/png","image/tiff","image/x-ms-bmp"];
+//]]>
+    </script>
+    <link rel="stylesheet" media="screen" href="/stylesheets/jstoolbar.css?1576844386" />
+    <script>
+        //<![CDATA[
+var datepickerOptions={dateFormat: 'yy-mm-dd', firstDay: 1, showOn: 'button', buttonImageOnly: true, buttonImage: '/images/calendar.png?1576844384', showButtonPanel: true, showWeek: true, showOtherMonths: true, selectOtherMonths: true, changeMonth: true, changeYear: true, beforeShow: beforeShowDatePicker};
+//]]>
+    </script>
+    <script src="/javascripts/i18n/datepicker-vi.js?1576844386"></script>
+    <script src="/plugin_assets/redmine_agile/javascripts/redmine_agile.js?1617068919"></script>
+    <script src="/javascripts/attachments.js?1576844386"></script>
+    <link rel="alternate" type="application/atom+xml"
+        title="2.1 Phần mềm nhà hàng - Feature #41349: [MH Danh sách đơn hàng/ Quản lý món order] Thêm lọc Ngày thực hiện đơn "
+        href="http://redmine.benhvientci.org/issues/41349.atom?key=215d19d1ef72cb10033f27e1f0a5bf4541e1d08a" />
+    <script src="/javascripts/context_menu.js?1576844386"></script>
+    <link rel="stylesheet" media="screen" href="/stylesheets/context_menu.css?1576844386" />
+</head>
+
+<body
+    class="theme-Purplemine2-2.14.0 project-phan-mem-nha-hang has-main-menu controller-issues action-show avatars-off">
+
+    <div id="wrapper">
+
+        <div class="flyout-menu js-flyout-menu">
+
+
+            <div class="flyout-menu__search">
+                <form action="/projects/phan-mem-nha-hang/search" accept-charset="UTF-8" name="form-3275bc8f"
+                    method="get"><input name="utf8" type="hidden" value="&#x2713;" />
+                    <input type="hidden" name="issues" value="1" />
+                    <label class="search-magnifier search-magnifier--flyout" for="flyout-search">&#9906;</label>
+                    <input type="text" name="q" id="flyout-search" class="small js-search-input" placeholder="Tìm" />
+                </form>
+            </div>
+
+            <div class="flyout-menu__avatar flyout-menu__avatar--no-avatar">
+                <a class="user active" href="/users/74">quangnv1911</a>
+            </div>
+
+            <h3>Dự án</h3>
+            <span class="js-project-menu"></span>
+
+            <h3>Tổng quan</h3>
+            <span class="js-general-menu"></span>
+
+            <span class="js-sidebar flyout-menu__sidebar"></span>
+
+            <h3>Hồ sơ</h3>
+            <span class="js-profile-menu"></span>
+
+        </div>
+
+        <div id="wrapper2">
+            <div id="wrapper3">
+                <div id="top-menu">
+                    <div id="account">
+                        <ul>
+                            <li><a class="my-account" href="/my/account">Cá nhân</a></li>
+                            <li><a class="logout" rel="nofollow" data-method="post" href="/logout">Thoát</a></li>
+                        </ul>
+                    </div>
+                    <div id="loggedas">Tài khoản &raquo; <a class="user active" href="/users/74">quangnv1911</a></div>
+                    <ul>
+                        <li><a class="home" href="/">Trang chính</a></li>
+                        <li><a class="my-page" href="/my/page">Trang riêng</a></li>
+                        <li><a class="projects" href="/projects">Dự án</a></li>
+                        <li><a class="help" href="https://www.redmine.org/guide">Giúp đỡ</a></li>
+                    </ul>
+                </div>
+
+                <div id="header">
+
+                    <a href="#" class="mobile-toggle-button js-flyout-menu-toggle-button"></a>
+
+                    <div id="quick-search">
+                        <form action="/projects/phan-mem-nha-hang/search" accept-charset="UTF-8" name="form-a492e34d"
+                            method="get"><input name="utf8" type="hidden" value="&#x2713;" />
+                            <input type="hidden" name="scope" />
+                            <input type="hidden" name="issues" value="1" />
+                            <label for='q'>
+          <a accesskey="4" href="/projects/phan-mem-nha-hang/search">Tìm</a>:
+        </label>
+                            <input type="text" name="q" id="q" size="20" class="small" accesskey="f" data-auto-complete="true" data-issues-url="/issues/auto_complete?q=" />
+                        </form>
+                        <div id="project-jump" class="drdn"><span class="drdn-trigger">2.1 Phần mềm nhà hàng</span>
+                            <div class="drdn-content">
+                                <div class="quick-search"><input type="text" name="q" id="projects-quick-search" value="" class="autocomplete" data-automcomplete-url="/projects/autocomplete.js?jump=issues" autocomplete="off" />
+                                </div>
+                                <div class="drdn-items projects selection"><strong>Bookmarks</strong><a
+                                        title="2.1 Phần mềm nhà hàng" class="selected"
+                                        href="/projects/phan-mem-nha-hang?jump=issues"><span style="padding-left:0px;">2.1 Phần mềm nhà hàng</span></a><strong>Recently used</strong><a
+                                        title="Kế toán giám sát số liệu"
+                                        href="/projects/ke-toan-giam-sat-so-lieu?jump=issues"><span style="padding-left:0px;">Kế toán giám sát số liệu</span></a><a
+                                        title="3.5 Khám Sức Khỏe"
+                                        href="/projects/phan-mem-kham-suc-khoe?jump=issues"><span style="padding-left:0px;">3.5 Khám Sức Khỏe</span></a><a
+                                        title="SmartQueue"
+                                        href="/projects/smartqueue?jump=issues"><span style="padding-left:0px;">SmartQueue</span></a>
+                                </div>
+                                <div class="drdn-items all-projects selection"><a href="/projects?jump=issues">Mọi dự
+                                        án</a></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h1><span class="breadcrumbs"><a class="root" href="/projects/khoi-van-hanh?jump=issues">2. Khối Vận Hành</a><span class="separator"> &raquo; </span></span><span class="current-project">2.1 Phần mềm nhà hàng</span>
+                    </h1>
+
+                    <div id="main-menu" class="tabs">
+                        <ul>
+                            <li>
+                                <a onclick="toggleNewObjectDropdown(); return false;" id="new-object" class="new-object"
+                                    href="#"> + </a>
+                                <ul class="menu-children">
+                                    <li><a accesskey="7" class="new-issue-sub"
+                                            href="/projects/phan-mem-nha-hang/issues/new">Tạo vấn đề mới</a></li>
+                                    <li><a class="new-issue-category"
+                                            href="/projects/phan-mem-nha-hang/issue_categories/new">Chủ đề mới</a></li>
+                                    <li><a class="new-version" href="/projects/phan-mem-nha-hang/versions/new">Phiên bản
+                                            mới</a></li>
+                                    <li><a class="new-wiki-page" href="/projects/phan-mem-nha-hang/wiki/new">New wiki
+                                            page</a></li>
+                                    <li><a class="new-file" href="/projects/phan-mem-nha-hang/files/new">Thêm tập tin
+                                            mới</a></li>
+                                </ul>
+                            </li>
+                            <li><a class="overview" href="/projects/phan-mem-nha-hang">Tóm tắt</a></li>
+                            <li><a class="activity" href="/projects/phan-mem-nha-hang/activity">Hoạt động</a></li>
+                            <li><a class="roadmap" href="/projects/phan-mem-nha-hang/roadmap">Kế hoạch</a></li>
+                            <li><a class="issues selected" href="/projects/phan-mem-nha-hang/issues">Vấn đề</a></li>
+                            <li><a class="gantt" href="/projects/phan-mem-nha-hang/issues/gantt">Biểu đồ sự kiện</a>
+                            </li>
+                            <li><a class="calendar" href="/projects/phan-mem-nha-hang/issues/calendar">Lịch</a></li>
+                            <li><a class="news" href="/projects/phan-mem-nha-hang/news">Tin tức</a></li>
+                            <li><a class="documents" href="/projects/phan-mem-nha-hang/documents">Tài liệu</a></li>
+                            <li><a class="wiki" href="/projects/phan-mem-nha-hang/wiki">Wiki</a></li>
+                            <li><a class="files" href="/projects/phan-mem-nha-hang/files">Tập tin</a></li>
+                            <li><a class="settings" href="/projects/phan-mem-nha-hang/settings">Thiết lập</a></li>
+                        </ul>
+                        <div class="tabs-buttons" style="display:none;">
+                            <button class="tab-left" onclick="moveTabLeft(this); return false;"></button>
+                            <button class="tab-right" onclick="moveTabRight(this); return false;"></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="main" class="nosidebar">
+                    <div id="sidebar">
+
+
+                    </div>
+
+                    <div id="content">
+
+                        <div class="contextual">
+                            <a onclick="showAndScrollTo(&quot;update&quot;, &quot;issue_notes&quot;); return false;"
+                                class="icon icon-edit" accesskey="e" href="/issues/41349/edit">Sửa</a>
+
+                            <a class="issue-41349-watcher icon icon-fav-off" data-remote="true" rel="nofollow"
+                                data-method="post" href="/watchers/watch?object_id=41349&amp;object_type=issue">Theo
+                                dõi</a>
+
+
+                        </div>
+
+
+                        <h2>Feature #41349</h2>
+
+                        <div class="issue tracker-2 status-8 priority-2 priority-default assigned-to-me details">
+
+                            <div class="gravatar-with-child">
+
+
+                            </div>
+
+                            <div class="subject">
+                                <div>
+                                    <h3>[MH Danh sách đơn hàng/ Quản lý món order] Thêm lọc Ngày thực hiện đơn </h3>
+                                </div>
+                            </div>
+                            <p class="author">
+                                Thêm bởi <a class="user active" href="/users/56">Huyền Trang Nguyễn</a> cách đây <a
+                                    title="01-04-2026 18:09"
+                                    href="/projects/phan-mem-nha-hang/activity?from=2026-04-01">khoảng 22 giờ</a>.
+                                Cập nhật cách đây <a title="02-04-2026 14:19"
+                                    href="/projects/phan-mem-nha-hang/activity?from=2026-04-02">khoảng 2 giờ</a>.
+                            </p>
+
+                            <div class="attributes">
+                                <div class="splitcontent">
+                                    <div class="splitcontentleft">
+                                        <div class="status attribute">
+                                            <div class="label">Trạng thái:</div>
+                                            <div class="value">Wait for test</div>
+                                        </div>
+                                        <div class="priority attribute">
+                                            <div class="label">Mức ưu tiên:</div>
+                                            <div class="value">Normal</div>
+                                        </div>
+                                        <div class="assigned-to attribute">
+                                            <div class="label">Phân công cho:</div>
+                                            <div class="value"><a class="user active" href="/users/74">Nguyen Quang</a>
+                                            </div>
+                                        </div>
+                                        <div class="fixed-version attribute">
+                                            <div class="label">Phiên bản:</div>
+                                            <div class="value"><a title="31-03-2026" href="/versions/969">3.3 Phát triển
+                                                    QR order tại Phòng Nội trú (31/03/2026)</a></div>
+                                        </div>
+                                    </div>
+                                    <div class="splitcontentleft">
+                                        <div class="start-date attribute">
+                                            <div class="label">Bắt đầu:</div>
+                                            <div class="value">01-04-2026</div>
+                                        </div>
+                                        <div class="due-date attribute">
+                                            <div class="label">Hết hạn:</div>
+                                            <div class="value"></div>
+                                        </div>
+                                        <div class="progress attribute">
+                                            <div class="label">Tiến độ:</div>
+                                            <div class="value">
+                                                <table class="progress progress-40">
+                                                    <tr>
+                                                        <td style="width: 40%;" class="closed" title="40%"></td>
+                                                        <td style="width: 60%;" class="todo"></td>
+                                                    </tr>
+                                                </table>
+                                                <p class="percent">40%</p>
+                                            </div>
+                                        </div>
+                                        <div class="estimated-hours attribute">
+                                            <div class="label">Thời gian ước lượng:</div>
+                                            <div class="value"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+
+                                <script>
+                                    //<![CDATA[
+linkableAttributeFields();
+//]]>
+                                </script>
+
+
+                            </div>
+
+                            <hr />
+                            <div class="description">
+                                <div class="contextual">
+                                    <a class="icon icon-comment" data-remote="true" rel="nofollow" data-method="post"
+                                        href="/issues/41349/quoted">Trích dẫn</a>
+                                </div>
+
+                                <p><strong>Mô tả</strong></p>
+                                <div class="wiki">
+                                    <p>Mong muốn:<br />- Thêm lọc Ngày thực hiện đơn<br />- Cho phép lọc khoảng ngày <br />- Lọc dữ liệu theo trường: restaurant_order.order_transfer_time
+                                    </p>
+
+
+                                    <p><img src="/attachments/download/39079/clipboard-202604020844-jf6e3.png" alt="" /><br /><img src="/attachments/download/39080/clipboard-202604020845-or6qh.png" alt="" />
+                                    </p>
+                                </div>
+                            </div>
+                            <hr />
+                            <p><strong>Tập tin</strong></p>
+                            <div class="attachments">
+
+                                <div class="contextual">
+                                    <a title="Edit attached files" class="icon-only icon-edit"
+                                        href="/attachments/issues/41349/edit">Edit attached files</a>
+                                </div>
+
+                                <table>
+                                    <tr>
+                                        <td>
+                                            <a class="icon icon-attachment lightbox_preview"
+                                                href="/attachments/download/39079/clipboard-202604020844-jf6e3.png">clipboard-202604020844-jf6e3.png</a>
+                                        </td>
+                                        <td class="alignrigth">
+                                            <a class="icon-only icon-magnifier lightbox_preview png" rel="attachments"
+                                                title="Xem trước" data-type="image" data-fancybox="attachments"
+                                                data-caption="clipboard-202604020844-jf6e3.png"
+                                                href="/attachments/download/39079/clipboard-202604020844-jf6e3.png">Xem</a>
+
+                                            <a class="icon-only icon-download" title="Tải về"
+                                                href="/attachments/download/39079/clipboard-202604020844-jf6e3.png">clipboard-202604020844-jf6e3.png</a>
+                                        </td>
+                                        <td class="alignrigth">
+                                            <span class="size">184 KB</span>
+                                        </td>
+                                        <td></td>
+                                        <td>
+                                            <span class="author">Huyền Trang Nguyễn, 02-04-2026 08:44</span>
+                                        </td>
+                                        <td>
+                                            <a data-confirm="Bạn chắc chứ?" class="delete icon-only icon-del"
+                                                title="Xóa" rel="nofollow" data-method="delete"
+                                                href="/attachments/39079">Xóa</a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <a class="icon icon-attachment lightbox_preview"
+                                                href="/attachments/download/39080/clipboard-202604020845-or6qh.png">clipboard-202604020845-or6qh.png</a>
+                                        </td>
+                                        <td class="alignrigth">
+                                            <a class="icon-only icon-magnifier lightbox_preview png" rel="attachments"
+                                                title="Xem trước" data-type="image" data-fancybox="attachments"
+                                                data-caption="clipboard-202604020845-or6qh.png"
+                                                href="/attachments/download/39080/clipboard-202604020845-or6qh.png">Xem</a>
+
+                                            <a class="icon-only icon-download" title="Tải về"
+                                                href="/attachments/download/39080/clipboard-202604020845-or6qh.png">clipboard-202604020845-or6qh.png</a>
+                                        </td>
+                                        <td class="alignrigth">
+                                            <span class="size">138 KB</span>
+                                        </td>
+                                        <td></td>
+                                        <td>
+                                            <span class="author">Huyền Trang Nguyễn, 02-04-2026 08:45</span>
+                                        </td>
+                                        <td>
+                                            <a data-confirm="Bạn chắc chứ?" class="delete icon-only icon-del"
+                                                title="Xóa" rel="nofollow" data-method="delete"
+                                                href="/attachments/39080">Xóa</a>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <div class="thumbnails images">
+                                    <div>
+                                        <a class="lightbox" rel="thumbnails"
+                                            title="Xem trước: clipboard-202604020844-jf6e3.png" data-type="image"
+                                            data-fancybox="thumbnails" data-caption="clipboard-202604020844-jf6e3.png"
+                                            href="/attachments/download/39079/clipboard-202604020844-jf6e3.png"><img src="/attachments/thumbnail/39079" /></a>
+                                    </div>
+                                    <div>
+                                        <a class="lightbox" rel="thumbnails"
+                                            title="Xem trước: clipboard-202604020845-or6qh.png" data-type="image"
+                                            data-fancybox="thumbnails" data-caption="clipboard-202604020845-or6qh.png"
+                                            href="/attachments/download/39080/clipboard-202604020845-or6qh.png"><img src="/attachments/thumbnail/39080" /></a>
+                                    </div>
+                                </div>
+
+                            </div>
+
+
+
+
+
+
+                            <hr />
+                            <div id="issue_tree">
+                                <div class="contextual">
+                                    <a
+                                        href="/projects/phan-mem-nha-hang/issues/new?back_url=%2Fissues%2F41349&amp;issue%5Bparent_issue_id%5D=41349&amp;issue%5Btracker_id%5D=2">Thêm</a>
+                                </div>
+                                <p><strong>Tác vụ con</strong></p>
+                                <form data-cm-url="/issues/context_menu" action="/issues/41349" accept-charset="UTF-8"
+                                    name="form-59c9a776" method="post">
+                                    <input name="utf8" type="hidden" value="&#x2713;" /><input type="hidden" name="authenticity_token" value="4dgi9E4n33ZX1sVoJpl8ODRvGsj49X8TzEftL6xBI2xWzwJVlrkD74SmyQ5U6OIKnqikC1/LhrA3Bz7d+8j73w==" />
+                                </form>
+                            </div>
+
+                            <hr />
+                            <div id="relations">
+                                <div class="contextual">
+                                    <a onclick="$(&#39;#new-relation-form&#39;).toggle(); $(&#39;#relation_issue_to_id&#39;).focus(); return false;"
+                                        href="#">Thêm</a>
+                                </div>
+
+                                <p><strong>Liên quan</strong></p>
+
+
+                                <form class="new_relation" id="new-relation-form" style="display: none;"
+                                    action="/issues/41349/relations" accept-charset="UTF-8" data-remote="true"
+                                    name="new-relation-form-afb3bdbd" method="post"><input name="utf8" type="hidden" value="&#x2713;" />
+
+
+                                    <p><select onchange="setPredecessorFieldsVisibility();" name="relation[relation_type]" id="relation_relation_type"><option selected="selected" value="relates">liên quan</option>
+<option value="duplicates">trùng với</option>
+<option value="duplicated">bị trùng bởi</option>
+<option value="blocks">chặn</option>
+<option value="blocked">chặn bởi</option>
+<option value="precedes">đi trước</option>
+<option value="follows">đi sau</option>
+<option value="copied_to">Sao chép đến</option>
+<option value="copied_from">Sao chép từ</option></select>
+                                        Vấn đề #<input size="10" type="text" name="relation[issue_to_id]" id="relation_issue_to_id" />
+                                        <span id="predecessor_fields" style="display:none;">
+Độ trễ: <input size="3" type="text" name="relation[delay]" id="relation_delay" /> ngày
+</span>
+                                        <input type="submit" name="commit" value="Thêm" data-disable-with="Thêm" />
+                                        <a href="#"
+                                            onclick="$(&quot;#new-relation-form&quot;).hide();; return false;">Bỏ
+                                            qua</a>
+                                    </p>
+
+                                    <script>
+                                        //<![CDATA[
+observeAutocompleteField('relation_issue_to_id', '/issues/auto_complete?issue_id=41349&project_id=phan-mem-nha-hang')
+//]]>
+                                    </script>
+
+                                    <script>
+                                        //<![CDATA[
+setPredecessorFieldsVisibility();
+//]]>
+                                    </script>
+
+                                </form>
+                            </div>
+
+                        </div>
+
+
+
+                        <div id="history">
+
+                            <div class="tabs">
+                                <ul>
+                                    <li><a id="tab-history"
+                                            onclick="showIssueHistory(&quot;history&quot;, this.href); return false;"
+                                            href="/issues/41349?tab=history">Lược sử</a></li>
+                                    <li><a id="tab-notes" class="selected"
+                                            onclick="showIssueHistory(&quot;notes&quot;, this.href); return false;"
+                                            href="/issues/41349?tab=notes">Notes</a></li>
+                                    <li><a id="tab-properties"
+                                            onclick="showIssueHistory(&quot;properties&quot;, this.href); return false;"
+                                            href="/issues/41349?tab=properties">Property changes</a></li>
+                                </ul>
+                                <div class="tabs-buttons" style="display:none;">
+                                    <button class="tab-left" type="button" onclick="moveTabLeft(this);"></button>
+                                    <button class="tab-right" type="button" onclick="moveTabRight(this);"></button>
+                                </div>
+                            </div>
+
+                            <div id="tab-content-history" style="display:none" class="tab-content">
+                                <div id="change-168306" class="journal has-details">
+                                    <div id="note-1">
+                                        <div class="contextual">
+                                            <span class="journal-actions"></span>
+                                            <a href="#note-1" class="journal-link">#1</a>
+                                        </div>
+                                        <h4 class='note-header'>
+
+                                            Cập nhật bởi <a class="user active" href="/users/56">Huyền Trang Nguyễn</a>
+                                            cách đây <a title="02-04-2026 08:46"
+                                                href="/projects/phan-mem-nha-hang/activity?from=2026-04-02">khoảng 7
+                                                giờ</a>
+                                            <span id="journal-168306-private_notes" class=""></span>
+                                        </h4>
+
+                                        <ul class="details">
+                                            <li><strong>Tập tin</strong> <a
+                                                    href="/attachments/39079">clipboard-202604020844-jf6e3.png</a> <a
+                                                    class="icon-only icon-download" title="Tải về"
+                                                    href="/attachments/download/39079/clipboard-202604020844-jf6e3.png">clipboard-202604020844-jf6e3.png</a>
+                                                được thêm</li>
+                                            <li><strong>Tập tin</strong> <a
+                                                    href="/attachments/39080">clipboard-202604020845-or6qh.png</a> <a
+                                                    class="icon-only icon-download" title="Tải về"
+                                                    href="/attachments/download/39080/clipboard-202604020845-or6qh.png">clipboard-202604020845-or6qh.png</a>
+                                                được thêm</li>
+                                            <li><strong>Chủ đề</strong> thay đổi từ
+                                                <i>[MH Danh sách đơn hàng] Thêm lọc Ngày thực hiện đơn </i> tới
+                                                <i>[MH Danh sách đơn hàng/ Quản lý món order] Thêm lọc Ngày thực hiện đơn </i>
+                                            </li>
+                                            <li><strong>Mô tả</strong> cập nhật (<a title="So sánh"
+                                                    href="/journals/168306/diff?detail_id=313986">diff</a>)</li>
+                                            <li><strong>Phân công cho</strong> thay đổi từ <i>Huyền Trang Nguyễn</i> tới
+                                                <i>Nguyen Quang</i></li>
+                                        </ul>
+                                        <div class="thumbnails">
+                                            <div><a title="clipboard-202604020844-jf6e3.png"
+                                                    href="/attachments/39079"><img srcset="/attachments/thumbnail/39079/200 2x" style="max-width: 100px; max-height: 100px;" src="/attachments/thumbnail/39079" /></a>
+                                            </div>
+                                            <div><a title="clipboard-202604020845-or6qh.png"
+                                                    href="/attachments/39080"><img srcset="/attachments/thumbnail/39080/200 2x" style="max-width: 100px; max-height: 100px;" src="/attachments/thumbnail/39080" /></a>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+
+                                <div id="change-168307" class="journal has-details">
+                                    <div id="note-2">
+                                        <div class="contextual">
+                                            <span class="journal-actions"></span>
+                                            <a href="#note-2" class="journal-link">#2</a>
+                                        </div>
+                                        <h4 class='note-header'>
+
+                                            Cập nhật bởi <a class="user active" href="/users/74">Nguyen Quang</a> cách
+                                            đây <a title="02-04-2026 08:46"
+                                                href="/projects/phan-mem-nha-hang/activity?from=2026-04-02">khoảng 7
+                                                giờ</a>
+                                            <span id="journal-168307-private_notes" class=""></span>
+                                        </h4>
+
+                                        <ul class="details">
+                                            <li><strong>Trạng thái</strong> thay đổi từ <i>New</i> tới
+                                                <i>In Progress</i></li>
+                                            <li><strong>Tiến độ</strong> thay đổi từ <i>0</i> tới <i>10</i></li>
+                                        </ul>
+
+                                    </div>
+                                </div>
+
+                                <div id="change-168384" class="journal has-notes has-details">
+                                    <div id="note-3">
+                                        <div class="contextual">
+                                            <span class="journal-actions"><a title="Trích dẫn" class="icon-only icon-comment" data-remote="true" rel="nofollow" data-method="post" href="/issues/41349/quoted?journal_id=168384&amp;journal_indice=3">Trích dẫn</a></span>
+                                            <a href="#note-3" class="journal-link">#3</a>
+                                        </div>
+                                        <h4 class='note-header'>
+
+                                            Cập nhật bởi <a class="user active" href="/users/74">Nguyen Quang</a> cách
+                                            đây <a title="02-04-2026 14:19"
+                                                href="/projects/phan-mem-nha-hang/activity?from=2026-04-02">khoảng 2
+                                                giờ</a>
+                                            <span id="journal-168384-private_notes" class=""></span>
+                                        </h4>
+
+                                        <ul class="details">
+                                            <li><strong>Trạng thái</strong> thay đổi từ <i>In Progress</i> tới
+                                                <i>Wait for test</i></li>
+                                            <li><strong>Tiến độ</strong> thay đổi từ <i>10</i> tới <i>40</i></li>
+                                        </ul>
+                                        <div id="journal-168384-notes" class="wiki">
+                                            <p><a class="external"
+                                                    href="https://code.zinnia.group/internal_hospital/order_antd/-/merge_requests/371">https://code.zinnia.group/internal_hospital/order_antd/-/merge_requests/371</a><br /><a
+                                                    class="external"
+                                                    href="https://code.zinnia.group/internal_hospital/order_backend/-/merge_requests/452">https://code.zinnia.group/internal_hospital/order_backend/-/merge_requests/452</a>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+
+                            </div>
+
+
+
+                            <script>
+                                //<![CDATA[
+showIssueHistory("notes", this.href)
+//]]>
+                            </script>
+
+                        </div>
+
+                        <div style="clear: both;"></div>
+                        <div class="contextual">
+                            <a onclick="showAndScrollTo(&quot;update&quot;, &quot;issue_notes&quot;); return false;"
+                                class="icon icon-edit" href="/issues/41349/edit">Sửa</a>
+
+                            <a class="issue-41349-watcher icon icon-fav-off" data-remote="true" rel="nofollow"
+                                data-method="post" href="/watchers/watch?object_id=41349&amp;object_type=issue">Theo
+                                dõi</a>
+
+
+                        </div>
+
+
+                        <div style="clear: both;"></div>
+                        <div id="update" style="display:none;">
+                            <h3>Sửa</h3>
+                            <form class="edit_issue" id="issue-form" enctype="multipart/form-data"
+                                action="/issues/41349" accept-charset="UTF-8" name="issue-form-5236e1de" method="post">
+                                <input name="utf8" type="hidden" value="&#x2713;" /><input type="hidden" name="_method" value="patch" /><input type="hidden" name="authenticity_token" value="jL12lWjnp8y4OTxIJ3DeBljQCcaiZ0RkGXfwyKJjDEQ7qlY0sHl7VWtJMC5VAUA08he3BQVZvcfiNyM69erU9w==" />
+
+
+                                <div class="box">
+                                    <fieldset class="tabular">
+                                        <legend>Thay đổi thuộc tính</legend>
+                                        <div id="all_attributes">
+
+
+                                            <input type="hidden" name="form_update_triggered_by" id="form_update_triggered_by" value="" />
+
+
+
+                                            <p><label for="issue_project_id">Dự án<span class="required"> *</span></label><select onchange="updateIssueFrom(&#39;/issues/41349/edit.js&#39;, this)" name="issue[project_id]" id="issue_project_id"><option value="6" selected="selected">2.1 Phần mềm nhà hàng</option><option value="15">3.5 Khám Sức Khỏe</option><option value="24">Kế toán giám sát số liệu</option><option value="35">SmartQueue</option></select>
+                                            </p>
+
+                                            <p>
+                                                <label for="issue_tracker_id">Kiểu vấn đề<span class="required"> *</span></label><select onchange="updateIssueFrom(&#39;/issues/41349/edit.js&#39;, this)" name="issue[tracker_id]" id="issue_tracker_id"><option value="1">Bug</option>
+<option selected="selected" value="2">Feature</option>
+<option value="3">Support</option></select>
+
+                                            </p>
+                                            <script>
+                                                //<![CDATA[
+
+  function selectTracker(id) {
+    var target = $('#issue_tracker_id');
+    target.attr("selected", false);
+    target.find('option[value="' + id + '"]').prop('selected', true);
+    target.trigger('change');
+    hideModal('#trackers_description h3');
+  }
+
+//]]>
+                                            </script>
+
+                                            <p><label for="issue_subject">Chủ đề<span class="required"> *</span></label><input size="80" maxlength="255" type="text" value="[MH Danh sách đơn hàng/ Quản lý món order] Thêm lọc Ngày thực hiện đơn " name="issue[subject]" id="issue_subject" />
+                                            </p>
+
+                                            <p>
+                                                <label for="issue_description">Mô tả</label>
+                                                <a href="#"
+                                                    onclick="$(this).hide(); $(&quot;#issue_description_and_toolbar&quot;).show(); return false;"><span class="icon icon-edit">Sửa</span></a>
+                                                <span id="issue_description_and_toolbar" style="display:none">
+    <textarea cols="60" class="wiki-edit" rows="10" data-auto-complete="true" data-issues-url="/issues/auto_complete?project_id=phan-mem-nha-hang&amp;q=" name="issue[description]" id="issue_description">
+Mong muốn:
+- Thêm lọc Ngày thực hiện đơn
+- Cho phép lọc khoảng ngày 
+- Lọc dữ liệu theo trường: restaurant_order.order_transfer_time
+
+!clipboard-202604020844-jf6e3.png!
+!clipboard-202604020845-or6qh.png!
+</textarea>
+</span>
+                                            </p>
+                                            <script>
+                                                //<![CDATA[
+var wikiToolbar = new jsToolBar(document.getElementById('issue_description')); wikiToolbar.setHelpLink('/help/vi/wiki_syntax_textile.html'); wikiToolbar.setPreviewUrl('/issues/preview?issue_id=41349&project_id=phan-mem-nha-hang'); wikiToolbar.draw();
+//]]>
+                                            </script>
+
+                                            <div id="attributes" class="attributes">
+
+
+                                                <div class="splitcontent">
+                                                    <div class="splitcontentleft">
+                                                        <p><label for="issue_status_id">Trạng thái<span class="required"> *</span></label><select onchange="updateIssueFrom(&#39;/issues/41349/edit.js&#39;, this)" name="issue[status_id]" id="issue_status_id"><option value="1">New</option>
+<option value="2">In Progress</option>
+<option value="4">Feedback</option>
+<option selected="selected" value="8">Wait for test</option>
+<option value="3">Resolved</option></select></p>
+
+
+                                                        <p><label for="issue_priority_id">Mức ưu tiên<span class="required"> *</span></label><select name="issue[priority_id]" id="issue_priority_id"><option value="1">Low</option>
+<option selected="selected" value="2">Normal</option>
+<option value="3">High</option>
+<option value="4">Urgent</option>
+<option value="5">Immediate</option></select></p>
+
+                                                        <p><label for="issue_assigned_to_id">Phân công cho</label><select name="issue[assigned_to_id]" id="issue_assigned_to_id"><option value="">&nbsp;</option>
+<option value="74">&lt;&lt; tôi &gt;&gt;</option><option value="33">Anh Vũ Vân</option><option value="55">Cường Phạm Quốc</option><option value="56">Huyền Trang Nguyễn</option><option value="59">Hạnh TC</option><option value="41">Hằng Đinh Thúy</option><option value="44">Hội Nguyễn Trọng</option><option value="30">Lợi Dương Văn</option><option value="12">Nam Nguyễn Hoài</option><option value="74" selected="selected">Nguyen Quang</option><option value="43">Ngữ Dương Quốc</option><option value="31">Nhung Phạm Thị</option><option value="10">Nhất Trần Trọng</option><option value="36">Oanh Phạm Thị</option><option value="61">Thư TTT</option><option value="58">Thảo Phạm Thị</option><option value="32">Thắng Phan Đức</option><option value="45">Thủy Nguyễn Thu</option><option value="27">Toản Nguyễn Văn</option><option value="21">Trang Nguyễn Hà</option><option value="49">Triệu Nguyễn Văn </option><option value="52">Việt Anh Đàm Thị</option><option value="11">Vũ Lê Tuấn</option><option value="70">Đại Nguyễn Hữu</option><option value="9">Đỗ  Vã</option><option value="50">Đỗ Việt Anh béo</option></select>
+                                                        </p>
+
+
+                                                        <p><label for="issue_fixed_version_id">Phiên bản</label><select name="issue[fixed_version_id]" id="issue_fixed_version_id"><option value="">&nbsp;</option>
+<option value="913">2.5 Phát triển QR order tại nhà hàng (31/01/2026)</option>
+<option value="911">4.1 Phát triển Báo cáo Order (31/01/2026)</option>
+<option value="912">5.1. Quản lý nhập kho (31/01/2026)</option>
+<option value="944">3.2.1 Phát triển Quản lý menu (14/03/2026)</option>
+<option selected="selected" value="969">3.3 Phát triển QR order tại Phòng Nội trú (31/03/2026)</option>
+<option value="825">Backlog</option></select>
+                                                            <a title="Phiên bản mới" tabindex="200"
+                                                                class="icon-only icon-add" data-remote="true"
+                                                                data-method="get"
+                                                                href="/projects/phan-mem-nha-hang/versions/new">Phiên
+                                                                bản mới</a>
+                                                        </p>
+                                                    </div>
+
+                                                    <div class="splitcontentright">
+                                                        <p id="parent_issue">
+                                                            <label for="issue_parent_issue_id">Tác vụ cha</label><input size="10" type="text" name="issue[parent_issue_id]" id="issue_parent_issue_id" />
+                                                        </p>
+                                                        <script>
+                                                            //<![CDATA[
+observeAutocompleteField('issue_parent_issue_id', '/issues/auto_complete?issue_id=41349&project_id=phan-mem-nha-hang&scope=tree&status=o')
+//]]>
+                                                        </script>
+
+                                                        <p id="start_date_area">
+                                                            <label for="issue_start_date">Bắt đầu</label><input size="10" value="2026-04-01" type="date" name="issue[start_date]" id="issue_start_date" />
+                                                            <script>
+                                                                //<![CDATA[
+$(function() { $('#issue_start_date').addClass('date').datepickerFallback(datepickerOptions); });
+//]]>
+                                                            </script>
+                                                        </p>
+
+                                                        <p id="due_date_area">
+                                                            <label for="issue_due_date">Hết hạn</label><input size="10" type="date" name="issue[due_date]" id="issue_due_date" />
+                                                            <script>
+                                                                //<![CDATA[
+$(function() { $('#issue_due_date').addClass('date').datepickerFallback(datepickerOptions); });
+//]]>
+                                                            </script>
+                                                        </p>
+
+                                                        <p><label for="issue_estimated_hours">Thời gian ước lượng</label><input size="3" value="" type="text" name="issue[estimated_hours]" id="issue_estimated_hours" /> Giờ
+                                                        </p>
+
+                                                    </div>
+                                                </div>
+
+
+
+
+
+
+
+                                            </div>
+
+                                            <div class="attributes">
+                                                <div class="splitcontent">
+
+                                                </div>
+                                            </div>
+
+
+
+
+                                            <script>
+                                                //<![CDATA[
+
+$(document).ready(function(){
+  $("#issue_tracker_id, #issue_status_id").each(function(){
+    $(this).val($(this).find("option[selected=selected]").val());
+  });
+});
+
+//]]>
+                                            </script>
+                                        </div>
+                                    </fieldset>
+                                    <fieldset>
+                                        <legend>Ghi chú</legend>
+                                        <textarea cols="60" rows="10" class="wiki-edit" data-auto-complete="true" data-issues-url="/issues/auto_complete?project_id=phan-mem-nha-hang&amp;q=" name="issue[notes]" id="issue_notes">
+</textarea>
+                                        <script>
+                                            //<![CDATA[
+var wikiToolbar = new jsToolBar(document.getElementById('issue_notes')); wikiToolbar.setHelpLink('/help/vi/wiki_syntax_textile.html'); wikiToolbar.setPreviewUrl('/issues/preview?issue_id=41349&project_id=phan-mem-nha-hang'); wikiToolbar.draw();
+//]]>
+                                        </script>
+
+                                        <input name="issue[private_notes]" type="hidden" value="0" /><input type="checkbox" value="1" name="issue[private_notes]" id="issue_private_notes" />
+                                        <label for="issue_private_notes">Ghi chú riêng tư</label>
+
+
+                                    </fieldset>
+
+                                    <fieldset>
+                                        <legend>Tập tin</legend>
+                                        <div class="contextual"><a
+                                                onclick="$(&#39;#existing-attachments&#39;).toggle(); return false;"
+                                                href="#">Edit attached files</a></div>
+                                        <div id="existing-attachments" style="display:none;">
+                                            <span class="existing-attachment">
+            <input type="text" name="" id="" value="clipboard-202604020844-jf6e3.png" class="icon icon-attachment filename" disabled="disabled" />
+            <label>
+              <input type="checkbox" name="issue[deleted_attachment_ids][]" value="39079" class="deleted_attachment" /> Xóa
+            </label>
+          </span>
+                                            <span class="existing-attachment">
+            <input type="text" name="" id="" value="clipboard-202604020845-or6qh.png" class="icon icon-attachment filename" disabled="disabled" />
+            <label>
+              <input type="checkbox" name="issue[deleted_attachment_ids][]" value="39080" class="deleted_attachment" /> Xóa
+            </label>
+          </span>
+                                            <hr />
+                                        </div>
+
+                                        <div id="new-attachments" style="display:inline-block;">
+
+                                            <span class="attachments_form">
+  <span class="attachments_fields">
+  </span>
+                                            <span class="add_attachment" style="">
+    <input type="file" name="attachments[dummy][file]" class="file_selector filedrop" multiple="multiple" onchange="addInputFiles(this);" data-max-file-size="5242880" data-max-file-size-message="File này không thể tải lên vì nó vượt quá kích thước cho phép : (5 MB)" data-max-concurrent-uploads="2" data-upload-path="/uploads.js" data-param="attachments" data-description="true" data-description-placeholder="Mô tả bổ sung" />
+    (Dung lượng tối đa: 5 MB)
+  </span>
+                                            </span>
+
+
+                                        </div>
+                                    </fieldset>
+                                </div>
+
+                                <input type="hidden" value="3" name="issue[lock_version]" id="issue_lock_version" />
+                                <input type="hidden" name="last_journal_id" id="last_journal_id" value="168384" />
+                                <input type="submit" name="commit" value="Gửi" data-disable-with="Gửi" />
+                                <a onclick="$(&#39;#update&#39;).hide(); return false;" href="/issues/41349">Bỏ qua</a>
+
+
+
+
+
+                            </form>
+                        </div>
+
+
+                        <p class="other-formats">Định dạng khác của trang này:
+                            <span><a class="atom" rel="nofollow" href="/issues/41349.atom?key=215d19d1ef72cb10033f27e1f0a5bf4541e1d08a">Atom</a></span>
+                            <span><a class="pdf" rel="nofollow" href="/issues/41349.pdf">PDF</a></span>
+                        </p>
+
+
+
+
+
+
+                        <div style="clear:both;"></div>
+                    </div>
+                </div>
+                <div id="footer">
+                    Powered by <a href="https://www.redmine.org/">Redmine</a> &copy; 2006-2019 Jean-Philippe Lang
+                </div>
+            </div>
+
+            <div id="ajax-indicator" style="display:none;"><span>Đang xử lý...</span></div>
+            <div id="ajax-modal" style="display:none;"></div>
+
+        </div>
+    </div>
+
+</body>
+
+</html>

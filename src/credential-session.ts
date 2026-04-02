@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import type { SessionCredentials } from "./types.js";
+import { logger } from "./logger.js";
 
 const ENCRYPTION_KEY = (process.env.CREDENTIAL_ENCRYPTION_KEY || "default-insecure-key-change-in-production").slice(0, 32).padEnd(32, "0");
 const ENCRYPTION_IV_LENGTH = 16;
@@ -17,11 +18,26 @@ class CredentialSessionManager {
   /**
    * Create a new session with credentials
    */
-  generateSession(username: string, password: string): string {
+  generateSession(input: {
+    username?: string;
+    password?: string;
+    redmineCookie?: string;
+  }): string {
+    const hasCookie = typeof input.redmineCookie === "string" && input.redmineCookie.length > 0;
+    const hasBasic =
+      typeof input.username === "string" &&
+      input.username.length > 0 &&
+      typeof input.password === "string";
+
+    if (!hasCookie && !hasBasic) {
+      throw new Error("Credential session requires redmineCookie or username/password");
+    }
+
     const sessionId = crypto.randomUUID();
     const credentials: SessionCredentials = {
-      username,
-      password,
+      username: input.username,
+      password: input.password,
+      redmineCookie: input.redmineCookie,
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
     };
 
@@ -30,6 +46,13 @@ class CredentialSessionManager {
     this.sessions.set(sessionId, {
       credentials,
       encrypted,
+    });
+
+    logger.info("credential-session", "Created credential session", {
+      sessionId,
+      username: credentials.username || "cookie-auth",
+      hasCookie,
+      expiresAt: credentials.expiresAt,
     });
 
     return sessionId;
@@ -55,7 +78,12 @@ class CredentialSessionManager {
    * Close a session and clear its credentials
    */
   closeSession(sessionId: string): boolean {
-    return this.sessions.delete(sessionId);
+    const deleted = this.sessions.delete(sessionId);
+    logger.debug("credential-session", "Closed credential session", {
+      sessionId,
+      deleted,
+    });
+    return deleted;
   }
 
   /**
@@ -120,7 +148,9 @@ export function startSessionCleanup(intervalMinutes = 60): ReturnType<typeof set
   return setInterval(() => {
     const cleared = credentialSessionManager.clearExpiredSessions();
     if (cleared > 0) {
-      console.error(`[CredentialSession] Cleared ${cleared} expired sessions`);
+      logger.info("credential-session", "Cleared expired sessions", {
+        cleared,
+      });
     }
   }, intervalMinutes * 60 * 1000);
 }

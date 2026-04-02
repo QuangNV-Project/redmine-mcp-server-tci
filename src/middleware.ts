@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import { createRequestId, logger } from "./logger.js";
 
 export function createAuthMiddleware(token: string) {
   return (req: Request, res: Response, next: NextFunction): void => {
@@ -12,6 +13,10 @@ export function createAuthMiddleware(token: string) {
 
     const authHeader = req.headers.authorization;
     if (!authHeader || authHeader !== `Bearer ${token}`) {
+      logger.warn("auth", "Rejected request with invalid bearer token", {
+        method: req.method,
+        path: req.path,
+      });
       res.status(401).json({ error: "Unauthorized: invalid or missing Bearer token" });
       return;
     }
@@ -58,6 +63,38 @@ export function createRateLimiter() {
   });
 }
 
+export function createRequestTracingMiddleware() {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const inboundRequestId = typeof req.headers["x-request-id"] === "string" ? req.headers["x-request-id"] : undefined;
+    const requestId = inboundRequestId || createRequestId();
+    const startedAt = Date.now();
+
+    res.locals.requestId = requestId;
+    res.setHeader("x-request-id", requestId);
+
+    logger.info("http", "Incoming request", {
+      requestId,
+      method: req.method,
+      path: req.path,
+      query: req.query,
+      userAgent: req.headers["user-agent"],
+      ip: req.ip,
+    });
+
+    res.on("finish", () => {
+      logger.info("http", "Request completed", {
+        requestId,
+        method: req.method,
+        path: req.path,
+        statusCode: res.statusCode,
+        durationMs: Date.now() - startedAt,
+      });
+    });
+
+    next();
+  };
+}
+
 export function createCorsMiddleware(allowedOrigins: string) {
   const origins = allowedOrigins
     .split(",")
@@ -67,7 +104,14 @@ export function createCorsMiddleware(allowedOrigins: string) {
   return cors({
     origin: origins.length > 0 ? origins : "*",
     methods: ["GET", "POST"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "x-redmine-username",
+      "x-redmine-password",
+      "x-redmine-cookie",
+      "x-request-id",
+    ],
   });
 }
 

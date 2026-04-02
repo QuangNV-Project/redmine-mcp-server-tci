@@ -1,6 +1,7 @@
 import type { Collection, Db } from "mongodb";
 import { MongoClient } from "mongodb";
 import type { ProjectConfig } from "./types.js";
+import { logger } from "./logger.js";
 
 let client: MongoClient | null = null;
 let db: Db | null = null;
@@ -9,7 +10,7 @@ export async function connectMongo(uri: string): Promise<void> {
   client = new MongoClient(uri);
   await client.connect();
   db = client.db();
-  console.error(`Connected to MongoDB`);
+  logger.info("mongo", "Connected to MongoDB");
 }
 
 export async function disconnectMongo(): Promise<void> {
@@ -17,6 +18,7 @@ export async function disconnectMongo(): Promise<void> {
     await client.close();
     client = null;
     db = null;
+    logger.info("mongo", "Disconnected from MongoDB");
   }
 }
 

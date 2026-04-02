@@ -6,6 +6,7 @@ A TCI-specific Redmine MCP (Model Context Protocol) server with **multi-account 
 
 ### 1. **Multi-Account Support** 👥
 - Users authenticate once per session with their own Redmine credentials
+- Supports cookie-based Redmine auth (`x-redmine-cookie` / `redmine_cookie`) for instances with REST API disabled
 - Each session maintains isolated credential storage
 - Credentials are encrypted at rest using AES-256-CBC
 - 24-hour session expiration with automatic cleanup
@@ -23,7 +24,7 @@ A TCI-specific Redmine MCP (Model Context Protocol) server with **multi-account 
 - Analyze ticket requirements from ad-hoc Excel files (path or base64 upload)
 
 ### 3. **Full Redmine Integration** 🔗
-- Get and list issues
+- Get issue details directly from Redmine HTML page (`/issues/:id`) when API is disabled
 - View issue details with comment history
 - Create git branches from tickets
 - Update ticket status with validation
@@ -49,7 +50,9 @@ npm install
 cp .env.example .env
 
 # 3. Configure your Redmine server in .env
-# Set REDMINE_TCI_URL, REDMINE_USERNAME (fallback), REDMINE_PASSWORD
+# Set REDMINE_TCI_URL and one of:
+# - REDMINE_COOKIE (recommended when Redmine REST API is disabled)
+# - REDMINE_USERNAME + REDMINE_PASSWORD (REST API/basic-auth flow)
 ```
 
 ### Configuration
@@ -112,6 +115,17 @@ Response:
 
 **Establish SSE session:**
 ```bash
+curl -X GET "http://localhost:3000/sse" \
+  -H "x-redmine-cookie: TCI_SESSION=...; _redmine_session=..."
+```
+
+Alternative query-string form:
+```bash
+curl -X GET "http://localhost:3000/sse?redmine_cookie=TCI_SESSION%3D...%3B%20_redmine_session%3D..."
+```
+
+Legacy basic-auth form (kept for backward compatibility):
+```bash
 curl -X GET "http://localhost:3000/sse?username=john&password=secret"
 ```
 
@@ -166,7 +180,6 @@ Arguments:
 
 #### Redmine Tools
 - `get_issue` - Get full issue details
-- `list_issues` - Search issues with filters
 - `create_branch_for_issue` - Create git branches from tickets
 
 #### Workflow Tools
@@ -242,6 +255,7 @@ examples/
 
 **RedmineClient (Enhanced)**
 - Supports both static credentials (fallback) and per-session credentials
+- Supports cookie-based session auth for HTML issue scraping
 - Same API as original mcp-server
 - Dynamically updates auth for each request
 
@@ -352,9 +366,10 @@ docker run -d \
 
 | Variable | Type | Required | Description |
 |----------|------|----------|-------------|
-| `REDMINE_URL` | string | Yes | Redmine instance URL |
+| `REDMINE_TCI_URL` | string | Yes | Redmine instance URL |
 | `REDMINE_USERNAME` | string | No* | Fallback username |
 | `REDMINE_PASSWORD` | string | No* | Fallback password |
+| `REDMINE_COOKIE` | string | No* | Fallback cookie for HTML ticket access |
 | `TRANSPORT` | string | No | `stdio` or `sse` (default: `stdio`) |
 | `PORT` | number | No | Server port (default: 3000) |
 | `WORKFLOW_EXCEL_PATH` | string | No | Path to workflow Excel file |
@@ -366,7 +381,7 @@ docker run -d \
 | `GIT_REPO_PATH` | string | No | Fallback git repository path |
 | `BRANCH_FORMAT` | string | No | `ticket-id` or `ticket-id-title` (default: `ticket-id-title`) |
 
-*Required if using static credentials instead of per-session auth
+*Required if using static credentials/cookie instead of per-session auth
 
 ## Security Considerations
 
@@ -386,8 +401,8 @@ docker run -d \
 
 ### Credentials validation fails
 - Verify Redmine URL is correct and accessible
-- Check username/password in request
-- Ensure user has API access enabled in Redmine
+- If REST API is disabled, send `x-redmine-cookie` (or `redmine_cookie`) instead of relying on API credentials
+- Check cookie/session validity by opening Redmine issue page in browser
 
 ### Performance issues with large workflows
 - Consider splitting workflow into multiple projects

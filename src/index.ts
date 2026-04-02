@@ -17,9 +17,10 @@ import * as mongo from "./mongo-client.js";
 import {
   createCorsMiddleware,
   createHelmetMiddleware,
+  createRequestTracingMiddleware,
   createRateLimiter,
 } from "./middleware.js";
-import { validateLimit, validateNoPathTraversal, validatePositiveInt } from "./types.js";
+import { validateNoPathTraversal, validatePositiveInt } from "./types.js";
 import type { RepoTarget } from "./types.js";
 import { loadWorkflowFromExcel } from "./excel-parser.js";
 import { credentialSessionManager, startSessionCleanup } from "./credential-session.js";
@@ -29,6 +30,7 @@ import {
   parseRequirementExcelFromBase64,
   parseRequirementExcelFromPath,
 } from "./requirement-excel-parser.js";
+import { logger } from "./logger.js";
 
 dotenv.config();
 
@@ -42,6 +44,8 @@ const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || "";
 const REDMINE_URL = process.env.REDMINE_TCI_URL || "";
 const REDMINE_USERNAME = process.env.REDMINE_USERNAME || "";
 const REDMINE_PASSWORD = process.env.REDMINE_PASSWORD || "";
+const REDMINE_COOKIE = process.env.REDMINE_COOKIE || "";
+const VALIDATE_SSE_CREDENTIALS = process.env.VALIDATE_SSE_CREDENTIALS === "true";
 const BRANCH_FORMAT =
   (process.env.BRANCH_FORMAT as "ticket-id" | "ticket-id-title") || "ticket-id-title";
 
@@ -49,7 +53,9 @@ const BRANCH_FORMAT =
 const WORKFLOW_EXCEL_PATH = process.env.WORKFLOW_EXCEL_PATH || "./workflow.xlsx";
 
 if (!REDMINE_URL) {
-  console.error("ERROR: REDMINE_URL must be set in environment or .env file");
+  logger.error("startup", "Missing required Redmine URL environment variable", {
+    expectedVariables: ["REDMINE_TCI_URL"],
+  });
   process.exit(1);
 }
 
@@ -58,18 +64,36 @@ let workflowDef: WorkflowDefinition | null = null;
 if (WORKFLOW_EXCEL_PATH && fs.existsSync(WORKFLOW_EXCEL_PATH)) {
   try {
     workflowDef = await loadWorkflowFromExcel(WORKFLOW_EXCEL_PATH);
-    console.error(`[Workflow] Loaded ${workflowDef.rules.length} rules from ${WORKFLOW_EXCEL_PATH}`);
+    logger.info("startup", "Workflow definition loaded", {
+      rules: workflowDef.rules.length,
+      filePath: WORKFLOW_EXCEL_PATH,
+    });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error(`[Workflow] Failed to load workflow: ${message}`);
+    logger.error("startup", "Failed to load workflow definition", {
+      filePath: WORKFLOW_EXCEL_PATH,
+      error: message,
+    });
     if (process.env.ENFORCE_STRICT_WORKFLOW === "true") {
       process.exit(1);
     }
   }
 }
 
+logger.info("startup", "Configuration loaded", {
+  transport: TRANSPORT,
+  port: PORT,
+  mongoEnabled: !!MONGODB_URI,
+  workflowConfigured: !!workflowDef,
+  hasFallbackRedmineCredentials: !!(REDMINE_USERNAME && REDMINE_PASSWORD),
+  hasFallbackRedmineCookie: !!REDMINE_COOKIE,
+  validateSseCredentialsOnConnect: VALIDATE_SSE_CREDENTIALS,
+});
+
 // Create default RedmineClient (fallback for static credentials)
-const defaultRedmine = new RedmineClient(REDMINE_URL, REDMINE_USERNAME || "guest", REDMINE_PASSWORD || "");
+const defaultRedmine = REDMINE_COOKIE
+  ? new RedmineClient(REDMINE_URL, { redmineCookie: REDMINE_COOKIE })
+  : new RedmineClient(REDMINE_URL, REDMINE_USERNAME || "guest", REDMINE_PASSWORD || "");
 
 const readSingleHeader = (value: string | string[] | undefined): string | undefined => {
   if (Array.isArray(value)) {
@@ -102,6 +126,19 @@ const parseBasicAuth = (
   }
 };
 
+const summarizeToolArgs = (args: unknown): unknown => {
+  if (!args || typeof args !== "object") {
+    return args;
+  }
+
+  const mapped = { ...(args as Record<string, unknown>) };
+  if (typeof mapped.excel_base64 === "string") {
+    mapped.excel_base64 = `[base64 length=${mapped.excel_base64.length}]`;
+  }
+
+  return mapped;
+};
+
 // ─── MCP Server ───────────────────────────────────────────────────────────────
 
 const createMcpServer = () =>
@@ -128,36 +165,12 @@ const registerServerHandlers = (server: Server, defaultCredentialSessionId: stri
               type: "boolean",
               description: "Include comment history (default: true)",
             },
+            session_id: {
+              type: "string",
+              description: "Credential session ID (supports cookie-based Redmine access)",
+            },
           },
           required: ["issue_id"],
-        },
-      },
-      {
-        name: "list_issues",
-        description:
-          "List Redmine issues with optional filters. Use this to find issues assigned to you or in a project.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            project_id: { type: "string", description: "Project identifier or ID to filter by" },
-            status_id: {
-              type: "string",
-              description: 'Status filter: "open", "closed", "*" (all), or a numeric status ID',
-            },
-            assigned_to_id: {
-              type: "string",
-              description: 'Filter by assignee: "me" or a numeric user ID',
-            },
-            limit: {
-              type: "number",
-              description: "Number of results to return (default: 25, max: 100)",
-            },
-            sort: {
-              type: "string",
-              description: 'Sort field, e.g. "updated_on:desc", "priority:desc"',
-            },
-          },
-          required: [],
         },
       },
       {
@@ -186,6 +199,10 @@ const registerServerHandlers = (server: Server, defaultCredentialSessionId: stri
             prefix: {
               type: "string",
               description: 'Branch prefix (default: "feature"). Use "fix", "hotfix", "chore" etc.',
+            },
+            session_id: {
+              type: "string",
+              description: "Credential session ID (supports cookie-based Redmine access)",
             },
           },
           required: ["issue_id"],
@@ -283,6 +300,14 @@ const registerServerHandlers = (server: Server, defaultCredentialSessionId: stri
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
+    const startedAt = Date.now();
+    let caughtError: string | null = null;
+
+    logger.info("tool", "Tool call received", {
+      tool: name,
+      hasDefaultCredentialSession: !!defaultCredentialSessionId,
+      args: summarizeToolArgs(args),
+    });
 
     try {
       // Get RedmineClient (with session credentials if provided)
@@ -293,10 +318,33 @@ const registerServerHandlers = (server: Server, defaultCredentialSessionId: stri
         if (resolvedSessionId && resolvedSessionId.length > 0) {
           const creds = credentialSessionManager.getCredentials(resolvedSessionId);
           if (creds) {
-            const client = new RedmineClient(REDMINE_URL, creds.username, creds.password);
+            const authMode = creds.redmineCookie ? "cookie" : "basic";
+
+            logger.debug("auth", "Using credential session for Redmine client", {
+              tool: name,
+              sessionId: resolvedSessionId,
+              username: creds.username || "cookie-auth",
+              authMode,
+            });
+
+            const client = creds.redmineCookie
+              ? new RedmineClient(REDMINE_URL, { redmineCookie: creds.redmineCookie })
+              : new RedmineClient(REDMINE_URL, creds.username || "guest", creds.password || "");
             return client;
           }
+
+          logger.warn("auth", "Credential session missing or expired; fallback credentials will be used", {
+            tool: name,
+            sessionId: resolvedSessionId,
+          });
         }
+
+        logger.debug("auth", "Using fallback Redmine credentials", {
+          tool: name,
+          hasFallbackUser: !!REDMINE_USERNAME,
+          hasFallbackCookie: !!REDMINE_COOKIE,
+          fallbackUsername: REDMINE_USERNAME || "guest",
+        });
         return defaultRedmine;
       };
 
@@ -352,39 +400,6 @@ ${issue.description || "_No description provided._"}
 ${childrenSection}${journalsSection}`;
 
           return { content: [{ type: "text", text: content }] };
-        }
-
-        // ── list_issues ──
-        case "list_issues": {
-          const limitErr = validateLimit(args?.limit);
-          if (limitErr)
-            return {
-              content: [{ type: "text", text: `Validation error: ${limitErr.message}` }],
-              isError: true,
-            };
-
-          const sessionId = args?.session_id as string | undefined;
-          const redmine = getRedmineClient(sessionId);
-          const { issues, total_count } = await redmine.listIssues({
-            project_id: args?.project_id as string,
-            status_id: (args?.status_id as string) || "open",
-            assigned_to_id: args?.assigned_to_id as string,
-            limit: (args?.limit as number) || 25,
-            sort: (args?.sort as string) || "updated_on:desc",
-          });
-
-          if (issues.length === 0) {
-            return { content: [{ type: "text", text: "No issues found matching the criteria." }] };
-          }
-
-          const lines = issues.map(
-            (i) =>
-              `- **#${i.id}** [${i.status.name}] [${i.priority.name}] ${i.subject}` +
-              (i.assigned_to ? ` → ${i.assigned_to.name}` : "")
-          );
-          const text =
-            `Found **${total_count}** issues (showing ${issues.length}):\n\n` + lines.join("\n");
-          return { content: [{ type: "text", text }] };
         }
 
         // ── create_branch_for_issue ──
@@ -793,7 +808,18 @@ _Use \`validate_ticket_transition\` to check if a specific transition is allowed
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
+      caughtError = message;
+      logger.error("tool", "Tool call failed", {
+        tool: name,
+        error: message,
+      });
       return { content: [{ type: "text", text: `Error: ${message}` }], isError: true };
+    } finally {
+      logger.info("tool", "Tool call completed", {
+        tool: name,
+        durationMs: Date.now() - startedAt,
+        caughtError,
+      });
     }
   });
 };
@@ -806,7 +832,7 @@ registerServerHandlers(server);
 async function startStdio() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Redmine MCP Server (TCI) running on stdio");
+  logger.info("startup", "Redmine MCP Server running on stdio transport");
 }
 
 async function startSSE() {
@@ -825,6 +851,10 @@ async function startSSE() {
     const activeSessions = Array.from(sessions.entries());
     sessions.clear();
 
+    logger.info("sse", "Closing all active SSE sessions", {
+      sessions: activeSessions.length,
+    });
+
     await Promise.all(
       activeSessions.map(async ([sessionId, session]) => {
         if (session.credentialSessionId) {
@@ -835,11 +865,16 @@ async function startSSE() {
           await session.server.close();
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : String(err);
-          console.error(`[SSE] Failed to close session ${sessionId}: ${message}`);
+          logger.error("sse", "Failed to close session", {
+            sessionId,
+            error: message,
+          });
         }
       })
     );
   };
+
+  app.use(createRequestTracingMiddleware());
 
   const jsonParser = express.json();
   app.use((req, res, next) => {
@@ -862,27 +897,139 @@ async function startSSE() {
   app.get("/sse", async (req, res) => {
     const queryUsername = req.query.username as string | undefined;
     const queryPassword = req.query.password as string | undefined;
+    const queryRedmineCookie = req.query.redmine_cookie as string | undefined;
     const headerUsername = readSingleHeader(req.headers["x-redmine-username"] as string | string[] | undefined);
     const headerPassword = readSingleHeader(req.headers["x-redmine-password"] as string | string[] | undefined);
+    const headerRedmineCookie = readSingleHeader(
+      req.headers["x-redmine-cookie"] as string | string[] | undefined
+    );
+    const cookieHeader = readSingleHeader(req.headers.cookie as string | string[] | undefined);
     const basicAuth = parseBasicAuth(readSingleHeader(req.headers.authorization));
+    const rawAuthorization = readSingleHeader(req.headers.authorization);
+
+    if (rawAuthorization && !basicAuth) {
+      logger.warn("sse", "Authorization header is not Basic and will be ignored for Redmine credential extraction", {
+        authorizationScheme: rawAuthorization.split(" ")[0],
+      });
+    }
 
     const username = queryUsername || headerUsername || basicAuth?.username;
     const password = queryPassword || headerPassword || basicAuth?.password;
+    const redmineCookie = queryRedmineCookie || headerRedmineCookie || cookieHeader;
+
+    const hasCookieCredentials = typeof redmineCookie === "string" && redmineCookie.trim().length > 0;
+    const hasBasicCredentials = typeof username === "string" && username.length > 0 && typeof password === "string";
+
+    const credentialSource = queryRedmineCookie
+      ? "query-cookie"
+      : headerRedmineCookie
+        ? "header-cookie"
+        : cookieHeader
+          ? "cookie-header"
+          : queryUsername && queryPassword
+            ? "query-basic"
+            : headerUsername && headerPassword
+              ? "header-basic"
+              : basicAuth
+                ? "basic-auth"
+                : "fallback";
 
     let credentialSessionId: string | null = null;
+    let credentialsValidated = false;
+    const authMode = hasCookieCredentials ? "cookie" : "basic";
 
-    // If credentials provided, validate them
-    if (username && password) {
-      try {
-        const testClient = new RedmineClient(REDMINE_URL, username, password);
-        const _test = await testClient.listProjects();
-        credentialSessionId = credentialSessionManager.generateSession(username, password);
-        console.error(`[SSE] New session created with user credentials: ${username}`);
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err);
-        res.status(401).json({ error: `Failed to validate credentials: ${message}` });
-        return;
+    // If credentials provided, create a session for this connection.
+    // Optional strict validation can be enabled with VALIDATE_SSE_CREDENTIALS=true.
+    if (hasCookieCredentials || hasBasicCredentials) {
+      const authCredentials = hasCookieCredentials
+        ? {
+          redmineCookie: redmineCookie?.trim(),
+          username,
+          password,
+        }
+        : {
+          username,
+          password,
+        };
+
+      logger.info("sse", "Received per-user Redmine credentials", {
+        username: username || "cookie-auth",
+        authMode,
+        credentialSource,
+        strictValidation: VALIDATE_SSE_CREDENTIALS,
+      });
+
+      credentialSessionId = credentialSessionManager.generateSession(authCredentials);
+
+      if (VALIDATE_SSE_CREDENTIALS) {
+        try {
+          const testClient = new RedmineClient(REDMINE_URL, authCredentials);
+          await testClient.validateConnection();
+          credentialsValidated = true;
+          logger.info("sse", "Validated Redmine credentials for SSE connection", {
+            username: username || "cookie-auth",
+            authMode,
+            credentialSource,
+          });
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          logger.info("sse", "Redmine credential validation failed", {
+            username: username || "cookie-auth",
+            authMode,
+            credentialSource,
+            error: message,
+          });
+          logger.warn("sse", "Failed to validate Redmine credentials for SSE connection", {
+            username: username || "cookie-auth",
+            authMode,
+            credentialSource,
+            error: message,
+          });
+          if (credentialSessionId) {
+            credentialSessionManager.closeSession(credentialSessionId);
+            credentialSessionId = null;
+          }
+          res.status(401).json({ error: `Failed to validate credentials: ${message}` });
+          return;
+        }
+      } else {
+        logger.info("sse", "Accepted Redmine credentials without connect-time validation", {
+          username: username || "cookie-auth",
+          authMode,
+          credentialSource,
+        });
+
+        // Validate in background for observability without breaking SSE handshake.
+        void (async () => {
+          try {
+            const testClient = new RedmineClient(REDMINE_URL, authCredentials);
+            await testClient.validateConnection();
+            logger.info("sse", "Background credential check succeeded", {
+              username: username || "cookie-auth",
+              authMode,
+              credentialSource,
+            });
+          } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            logger.info("sse", "Background credential check failed", {
+              username: username || "cookie-auth",
+              authMode,
+              credentialSource,
+              error: message,
+            });
+            logger.warn("sse", "Background credential check failed", {
+              username: username || "cookie-auth",
+              authMode,
+              credentialSource,
+              error: message,
+            });
+          }
+        })();
       }
+    } else {
+      logger.warn("sse", "SSE connection without per-user credentials; fallback credentials will be used", {
+        credentialSource,
+      });
     }
 
     const transport = new SSEServerTransport("/messages", res);
@@ -894,6 +1041,12 @@ async function startSSE() {
       transport,
       server: sessionServer,
       credentialSessionId,
+    });
+
+    logger.info("sse", "SSE session created", {
+      sessionId,
+      hasCredentialSession: !!credentialSessionId,
+      activeSessions: sessions.size,
     });
 
     res.on("close", () => {
@@ -909,7 +1062,15 @@ async function startSSE() {
 
       void session.server.close().catch((err: unknown) => {
         const message = err instanceof Error ? err.message : String(err);
-        console.error(`[SSE] Failed to close server on disconnect: ${message}`);
+        logger.error("sse", "Failed to close server on disconnect", {
+          sessionId,
+          error: message,
+        });
+      });
+
+      logger.info("sse", "SSE session closed", {
+        sessionId,
+        activeSessions: sessions.size,
       });
     });
 
@@ -922,6 +1083,7 @@ async function startSSE() {
           type: "connection_info",
           sessionId,
           credentialsValid: !!credentialSessionId,
+          credentialsValidatedOnConnect: credentialsValidated,
           credentialSessionId,
         })}\n\n`
       );
@@ -933,11 +1095,17 @@ async function startSSE() {
 
       void sessionServer.close().catch((closeErr: unknown) => {
         const message = closeErr instanceof Error ? closeErr.message : String(closeErr);
-        console.error(`[SSE] Failed to close server after connect error: ${message}`);
+        logger.error("sse", "Failed to close server after connect error", {
+          sessionId,
+          error: message,
+        });
       });
 
       const message = err instanceof Error ? err.message : String(err);
-      console.error(`[SSE] Failed to connect transport: ${message}`);
+      logger.error("sse", "Failed to connect SSE transport", {
+        sessionId,
+        error: message,
+      });
 
       if (!res.headersSent) {
         res.status(500).json({ error: `Failed to establish SSE transport: ${message}` });
@@ -951,6 +1119,9 @@ async function startSSE() {
     const sessionId = req.query.sessionId as string;
     const session = sessions.get(sessionId);
     if (!session) {
+      logger.warn("sse", "Received message for invalid or expired session", {
+        sessionId,
+      });
       res.status(400).json({ error: "Invalid or expired session" });
       return;
     }
@@ -959,7 +1130,10 @@ async function startSSE() {
       await session.transport.handlePostMessage(req, res);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error(`[SSE] Failed to handle message for session ${sessionId}: ${message}`);
+      logger.error("sse", "Failed to handle MCP message", {
+        sessionId,
+        error: message,
+      });
 
       if (!res.headersSent) {
         res.status(500).json({ error: `Failed to handle MCP message: ${message}` });
@@ -979,19 +1153,23 @@ async function startSSE() {
   });
 
   app.listen(PORT, () => {
-    console.error(`Redmine MCP Server (TCI) running on http://localhost:${PORT}`);
-    console.error(`  SSE endpoint: http://localhost:${PORT}/sse`);
-    console.error(`  Health check: http://localhost:${PORT}/health`);
-    console.error(`  MongoDB: ${MONGODB_URI ? "connected" : "disabled"}`);
-    console.error(`  Workflow: ${workflowDef ? `loaded (${workflowDef.rules.length} rules)` : "disabled"}`);
+    logger.info("startup", "Redmine MCP Server running on SSE transport", {
+      baseUrl: `http://localhost:${PORT}`,
+      sseEndpoint: `http://localhost:${PORT}/sse`,
+      healthEndpoint: `http://localhost:${PORT}/health`,
+      mongo: MONGODB_URI ? "connected" : "disabled",
+      workflow: workflowDef ? `loaded (${workflowDef.rules.length} rules)` : "disabled",
+    });
   });
 
   process.on("SIGINT", () => {
     if (sessionCleanupTimer) clearInterval(sessionCleanupTimer);
+    logger.info("shutdown", "Received SIGINT, closing sessions");
     void closeAllSessions();
   });
   process.on("SIGTERM", () => {
     if (sessionCleanupTimer) clearInterval(sessionCleanupTimer);
+    logger.info("shutdown", "Received SIGTERM, closing sessions");
     void closeAllSessions();
   });
 }
@@ -1001,10 +1179,9 @@ async function main() {
     try {
       await connectMongo(MONGODB_URI);
     } catch (err) {
-      console.error(
-        "WARNING: MongoDB connection failed. Multi-repo features disabled.",
-        err instanceof Error ? err.message : err
-      );
+      logger.warn("startup", "MongoDB connection failed. Multi-repo features disabled", {
+        error: err instanceof Error ? err.message : err,
+      });
     }
   }
 
@@ -1017,14 +1194,18 @@ async function main() {
       break;
     default: {
       const _exhaustive: never = TRANSPORT;
-      console.error(`Unknown transport: ${_exhaustive}`);
+      logger.error("startup", "Unknown transport configured", {
+        transport: _exhaustive,
+      });
       process.exit(1);
     }
   }
 }
 
 main().catch(async (err) => {
-  console.error("Fatal error:", err);
+  logger.error("startup", "Fatal error", {
+    error: err,
+  });
   await disconnectMongo();
   process.exit(1);
 });

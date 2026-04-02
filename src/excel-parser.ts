@@ -7,6 +7,7 @@ import type {
   WorkflowAction,
   WorkflowDefinition,
 } from "./types.js";
+import { logger } from "./logger.js";
 
 export interface RawWorkflowRule {
   tracker?: string;
@@ -146,7 +147,10 @@ function parseActionsSheet(sheet: XLSX.WorkSheet): Map<string, WorkflowAction[]>
       try {
         parameters = JSON.parse(raw.parameters);
       } catch {
-        console.warn(`Failed to parse parameters for action ${raw.action_type}: ${raw.parameters}`);
+        logger.warn("workflow-excel-parser", "Failed to parse action parameters as JSON", {
+          actionType: raw.action_type,
+          rawParameters: raw.parameters,
+        });
         parameters = { raw: raw.parameters };
       }
     }
