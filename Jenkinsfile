@@ -134,7 +134,7 @@ pipeline {
                                 ENV_FILE=".env.prod"
                                 PORT_VAR="REDMINE_MCP_SERVER_PORT"
                                 source ./infra/\${ENV_FILE}
-                                eval "PORT=\\$\${PORT_VAR}"
+                                eval "PORT=\\\$\${PORT_VAR}"
 
                                 echo "Running ${CONTAINER_NAME} -> Port: \$PORT"
 
