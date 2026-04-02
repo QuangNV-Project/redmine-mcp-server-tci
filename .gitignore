@@ -1,0 +1,25 @@
+node_modules/
+dist/
+.env
+*.js.map
+*.d.ts
+!*.config.ts
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Husky
+.husky/_/
+.env
+run-dev.ps1
