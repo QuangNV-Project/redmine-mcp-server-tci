@@ -49,7 +49,7 @@ npm install
 cp .env.example .env
 
 # 3. Configure your Redmine server in .env
-# Set REDMINE_URL, REDMINE_USERNAME (fallback), REDMINE_PASSWORD
+# Set REDMINE_TCI_URL, REDMINE_USERNAME (fallback), REDMINE_PASSWORD
 ```
 
 ### Configuration
@@ -58,7 +58,7 @@ Edit `.env` with your settings:
 
 ```env
 # Required
-REDMINE_URL=https://your-redmine.example.com
+REDMINE_TCI_URL=https://your-redmine.example.com
 
 # Server
 TRANSPORT=sse                    # or "stdio"

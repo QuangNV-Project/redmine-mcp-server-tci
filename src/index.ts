@@ -36,10 +36,10 @@ dotenv.config();
 
 const TRANSPORT = (process.env.TRANSPORT || "stdio") as "stdio" | "sse";
 const PORT = parseInt(process.env.PORT || "3000", 10);
-const MONGODB_URI = process.env.MONGODB_URI || "";
+const MONGODB_URI = process.env.MONGODB_URI_MCP_TCI || "";
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || "";
 
-const REDMINE_URL = process.env.REDMINE_URL || "";
+const REDMINE_URL = process.env.REDMINE_TCI_URL || "";
 const REDMINE_USERNAME = process.env.REDMINE_USERNAME || "";
 const REDMINE_PASSWORD = process.env.REDMINE_PASSWORD || "";
 const BRANCH_FORMAT =
@@ -71,6 +71,37 @@ if (WORKFLOW_EXCEL_PATH && fs.existsSync(WORKFLOW_EXCEL_PATH)) {
 // Create default RedmineClient (fallback for static credentials)
 const defaultRedmine = new RedmineClient(REDMINE_URL, REDMINE_USERNAME || "guest", REDMINE_PASSWORD || "");
 
+const readSingleHeader = (value: string | string[] | undefined): string | undefined => {
+  if (Array.isArray(value)) {
+    return value[0];
+  }
+  return value;
+};
+
+const parseBasicAuth = (
+  authorizationHeader: string | undefined
+): { username: string; password: string } | null => {
+  if (!authorizationHeader || !authorizationHeader.startsWith("Basic ")) {
+    return null;
+  }
+
+  try {
+    const base64 = authorizationHeader.slice("Basic ".length).trim();
+    const decoded = Buffer.from(base64, "base64").toString("utf-8");
+    const separatorIndex = decoded.indexOf(":");
+    if (separatorIndex < 0) {
+      return null;
+    }
+
+    return {
+      username: decoded.slice(0, separatorIndex),
+      password: decoded.slice(separatorIndex + 1),
+    };
+  } catch {
+    return null;
+  }
+};
+
 // ─── MCP Server ───────────────────────────────────────────────────────────────
 
 const createMcpServer = () =>
@@ -81,7 +112,7 @@ const createMcpServer = () =>
 
 // ─── Tool Definitions ─────────────────────────────────────────────────────────
 
-const registerServerHandlers = (server: Server) => {
+const registerServerHandlers = (server: Server, defaultCredentialSessionId: string | null = null) => {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: [
       // ── Redmine tools ──
@@ -256,8 +287,11 @@ const registerServerHandlers = (server: Server) => {
     try {
       // Get RedmineClient (with session credentials if provided)
       const getRedmineClient = (sessionId?: string): RedmineClient => {
-        if (sessionId && sessionId.length > 0) {
-          const creds = credentialSessionManager.getCredentials(sessionId);
+        const resolvedSessionId =
+          sessionId && sessionId.length > 0 ? sessionId : defaultCredentialSessionId || undefined;
+
+        if (resolvedSessionId && resolvedSessionId.length > 0) {
+          const creds = credentialSessionManager.getCredentials(resolvedSessionId);
           if (creds) {
             const client = new RedmineClient(REDMINE_URL, creds.username, creds.password);
             return client;
@@ -826,8 +860,14 @@ async function startSSE() {
 
   // Handle initial connection with credentials
   app.get("/sse", async (req, res) => {
-    const username = req.query.username as string | undefined;
-    const password = req.query.password as string | undefined;
+    const queryUsername = req.query.username as string | undefined;
+    const queryPassword = req.query.password as string | undefined;
+    const headerUsername = readSingleHeader(req.headers["x-redmine-username"] as string | string[] | undefined);
+    const headerPassword = readSingleHeader(req.headers["x-redmine-password"] as string | string[] | undefined);
+    const basicAuth = parseBasicAuth(readSingleHeader(req.headers.authorization));
+
+    const username = queryUsername || headerUsername || basicAuth?.username;
+    const password = queryPassword || headerPassword || basicAuth?.password;
 
     let credentialSessionId: string | null = null;
 
@@ -847,7 +887,7 @@ async function startSSE() {
 
     const transport = new SSEServerTransport("/messages", res);
     const sessionServer = createMcpServer();
-    registerServerHandlers(sessionServer);
+    registerServerHandlers(sessionServer, credentialSessionId);
 
     const sessionId = transport.sessionId;
     sessions.set(sessionId, {
